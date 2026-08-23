@@ -1,1 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eye Care - 20-20-20 Rule</title>
+<style>
+    body {
+        margin: 0;
+        font-family: sans-serif;
+        background: linear-gradient(135deg, #1f2937, #111827);
+        color: #ffffff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        text-align: center;
+    }
+    h1 { font-size: 22px; margin-bottom: 8px; }
+    p { font-size: 15px; color: #d1d5db; margin: 4px 0 20px; }
+    button {
+        background: #22c55e;
+        color: #ffffff;
+        border: none;
+        padding: 14px 28px;
+        border-radius: 10px;
+        font-size: 16px;
+        margin: 6px;
+    }
+    button.secondary { background: #374151; }
+</style>
+</head>
+<body>
+    <h1>👁 20-20-20 Rule</h1>
+    <p>Every 20 minutes, look at something<br>20 feet away for 20 seconds.</p>
+    <button onclick="startTimer()">Start</button>
+    <button class="secondary" onclick="stopTimer()">Stop</button>
 
+    <script>
+        function startTimer() {
+            if (window.AndroidBridge) {
+                window.AndroidBridge.startTimer();
+            }
+        }
+        function stopTimer() {
+            if (window.AndroidBridge) {
+                window.AndroidBridge.stopTimer();
+            }
+        }
+    </script>
+</body>
+</html>
