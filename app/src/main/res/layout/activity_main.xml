@@ -1,11 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="#111827"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="24dp">
 
-    <WebView
-        android:id="@+id/webView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="👁 20-20-20 Eye Care"
+        android:textColor="#FFFFFF"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp" />
 
-</FrameLayout>
+    <TextView
+        android:id="@+id/statusText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Reminder paused"
+        android:textColor="#9CA3AF"
+        android:textSize="14sp"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:id="@+id/countdownText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="20:00"
+        android:textColor="#22C55E"
+        android:textSize="56sp"
+        android:textStyle="bold"
+        android:fontFamily="monospace"
+        android:layout_marginBottom="24dp" />
+
+    <TextView
+        android:id="@+id/sessionText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Breaks completed: 0"
+        android:textColor="#D1D5DB"
+        android:textSize="15sp"
+        android:layout_marginBottom="32dp" />
+
+    <Button
+        android:id="@+id/startPauseButton"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        android:text="Start"
+        android:backgroundTint="#22C55E"
+        android:textColor="#FFFFFF"
+        android:layout_marginBottom="12dp" />
+
+    <Button
+        android:id="@+id/resetButton"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        android:text="Reset"
+        android:backgroundTint="#374151"
+        android:textColor="#FFFFFF" />
+
+</LinearLayout>
