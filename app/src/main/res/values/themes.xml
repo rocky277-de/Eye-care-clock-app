@@ -1,1 +1,7 @@
-
+<resources>
+    <style name="Theme.EyeCareApp" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#22C55E</item>
+        <item name="colorPrimaryDark">#16A34A</item>
+        <item name="colorAccent">#22C55E</item>
+    </style>
+</resources>
