@@ -6,19 +6,14 @@ import android.content.Intent
 import android.os.Build
 import android.provider.Settings
 
-/**
- * Fires every 20 minutes while the timer is running.
- * Launches the floating overlay reminding the user to look 20 feet away for 20 seconds,
- * then reschedules the next alarm.
- */
+/** Fires when the configured work interval ends and opens the paused rest overlay. */
 class TimerReceiver : BroadcastReceiver() {
-
     override fun onReceive(context: Context, intent: Intent) {
+        if (!TimerManager.isRunning(context)) return
+
         val canDrawOverlays = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Settings.canDrawOverlays(context)
-        } else {
-            true
-        }
+        } else true
 
         if (canDrawOverlays) {
             val serviceIntent = Intent(context, OverlayService::class.java)
@@ -28,8 +23,6 @@ class TimerReceiver : BroadcastReceiver() {
                 context.startService(serviceIntent)
             }
         }
-
-        // Schedule the next 20-minute reminder.
-        TimerManager.rescheduleNext(context)
+        // Do not schedule the next work interval until the user finishes or skips rest.
     }
 }
