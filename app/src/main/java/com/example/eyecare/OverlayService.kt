@@ -122,7 +122,7 @@ class OverlayService : Service() {
 
             override fun onTouch(v: View, event: MotionEvent): Boolean {
                 val p = params ?: return false
-                when (event.actionMasked) {
+                return when (event.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
                         downX = event.rawX
                         downY = event.rawY
