@@ -1,6 +1,9 @@
 package com.example.eyecare
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Build
@@ -8,28 +11,44 @@ import android.os.Bundle
 import android.os.CountDownTimer
 import android.provider.Settings
 import android.widget.Button
+import android.widget.NumberPicker
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
-
     private lateinit var countdownText: TextView
     private lateinit var statusText: TextView
     private lateinit var sessionText: TextView
     private lateinit var startPauseButton: Button
     private lateinit var resetButton: Button
+    private lateinit var workPicker: NumberPicker
+    private lateinit var restPicker: NumberPicker
     private lateinit var prefs: SharedPreferences
 
     private var countDownTimer: CountDownTimer? = null
-    private var timeLeftMs: Long = INTERVAL_MS
+    private var timeLeftMs = 20 * 60 * 1000L
     private var isRunning = false
     private var breaksCompleted = 0
 
     companion object {
-        private const val INTERVAL_MS = 20 * 60 * 1000L // 20 minutes
-        private const val PREFS_NAME = "eyecare_prefs"
         private const val PREF_BREAKS = "breaks_completed"
+    }
+
+    private val breakFinishedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == OverlayService.ACTION_BREAK_FINISHED) {
+                breaksCompleted = prefs.getInt(PREF_BREAKS, 0)
+                updateSessionText()
+                if (TimerManager.isRunning(this@MainActivity)) {
+                    isRunning = true
+                    statusText.text = "Reminder running"
+                    startPauseButton.text = "Pause"
+                    timeLeftMs = TimerManager.getWorkMinutes(this@MainActivity) * 60_000L
+                    startLocalCountdown()
+                }
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,28 +60,42 @@ class MainActivity : AppCompatActivity() {
         sessionText = findViewById(R.id.sessionText)
         startPauseButton = findViewById(R.id.startPauseButton)
         resetButton = findViewById(R.id.resetButton)
+        workPicker = findViewById(R.id.workMinutesPicker)
+        restPicker = findViewById(R.id.restSecondsPicker)
 
-        prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        prefs = getSharedPreferences(TimerManager.PREFS_NAME, MODE_PRIVATE)
+        configurePickers()
         breaksCompleted = prefs.getInt(PREF_BREAKS, 0)
         updateSessionText()
-        updateCountdownDisplay()
+        resetLocalCountdown()
 
         startPauseButton.setOnClickListener {
             if (isRunning) pauseTimer() else startTimer()
         }
+        resetButton.setOnClickListener { resetTimer() }
+    }
 
-        resetButton.setOnClickListener {
-            resetTimer()
+    private fun configurePickers() {
+        workPicker.minValue = TimerManager.MIN_WORK_MINUTES
+        workPicker.maxValue = TimerManager.MAX_WORK_MINUTES
+        workPicker.value = TimerManager.getWorkMinutes(this)
+
+        restPicker.minValue = TimerManager.MIN_REST_SECONDS
+        restPicker.maxValue = TimerManager.MAX_REST_SECONDS
+        restPicker.value = TimerManager.getRestSeconds(this)
+
+        val save = {
+            TimerManager.saveSettings(this, workPicker.value, restPicker.value)
+            if (!isRunning) resetLocalCountdown()
+            Toast.makeText(this, "Timer settings saved", Toast.LENGTH_SHORT).show()
         }
+        workPicker.setOnValueChangedListener { _, _, _ -> save() }
+        restPicker.setOnValueChangedListener { _, _, _ -> save() }
     }
 
     private fun requestOverlayPermissionIfNeeded(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
-            val intent = Intent(
-                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:$packageName")
-            )
-            startActivity(intent)
+            startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
             Toast.makeText(this, "Please allow 'Display over other apps' permission", Toast.LENGTH_LONG).show()
             return false
         }
@@ -71,36 +104,28 @@ class MainActivity : AppCompatActivity() {
 
     private fun startTimer() {
         if (!requestOverlayPermissionIfNeeded()) return
-
+        TimerManager.saveSettings(this, workPicker.value, restPicker.value)
+        timeLeftMs = workPicker.value * 60_000L
         isRunning = true
         statusText.text = "Reminder running"
         startPauseButton.text = "Pause"
+        startLocalCountdown()
+        TimerManager.startTimer(this)
+    }
 
+    private fun startLocalCountdown() {
+        countDownTimer?.cancel()
         countDownTimer = object : CountDownTimer(timeLeftMs, 1000L) {
             override fun onTick(millisUntilFinished: Long) {
                 timeLeftMs = millisUntilFinished
                 updateCountdownDisplay()
             }
-
             override fun onFinish() {
-                breaksCompleted++
-                prefs.edit().putInt(PREF_BREAKS, breaksCompleted).apply()
-                updateSessionText()
-
-                val serviceIntent = Intent(this@MainActivity, OverlayService::class.java)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    startForegroundService(serviceIntent)
-                } else {
-                    startService(serviceIntent)
-                }
-
-                timeLeftMs = INTERVAL_MS
+                timeLeftMs = TimerManager.getWorkMinutes(this@MainActivity) * 60_000L
                 updateCountdownDisplay()
-                startTimer()
+                statusText.text = "Break overlay ready"
             }
         }.start()
-
-        TimerManager.startTimer(this)
     }
 
     private fun pauseTimer() {
@@ -114,26 +139,45 @@ class MainActivity : AppCompatActivity() {
     private fun resetTimer() {
         countDownTimer?.cancel()
         isRunning = false
-        timeLeftMs = INTERVAL_MS
+        timeLeftMs = TimerManager.getWorkMinutes(this) * 60_000L
         statusText.text = "Reminder paused"
         startPauseButton.text = "Start"
         updateCountdownDisplay()
         TimerManager.stopTimer(this)
     }
 
+    private fun resetLocalCountdown() {
+        timeLeftMs = TimerManager.getWorkMinutes(this) * 60_000L
+        updateCountdownDisplay()
+    }
+
     private fun updateCountdownDisplay() {
         val totalSeconds = timeLeftMs / 1000
-        val minutes = totalSeconds / 60
-        val seconds = totalSeconds % 60
-        countdownText.text = String.format("%02d:%02d", minutes, seconds)
+        countdownText.text = String.format("%02d:%02d", totalSeconds / 60, totalSeconds % 60)
     }
 
     private fun updateSessionText() {
         sessionText.text = "Breaks completed: $breaksCompleted"
     }
 
+    override fun onStart() {
+        super.onStart()
+        val filter = IntentFilter(OverlayService.ACTION_BREAK_FINISHED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(breakFinishedReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("DEPRECATION")
+            registerReceiver(breakFinishedReceiver, filter)
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        try { unregisterReceiver(breakFinishedReceiver) } catch (_: IllegalArgumentException) { }
+    }
+
     override fun onDestroy() {
-        super.onDestroy()
         countDownTimer?.cancel()
+        super.onDestroy()
     }
 }
