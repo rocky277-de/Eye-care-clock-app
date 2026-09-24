@@ -6,65 +6,45 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 
-/**
- * Handles scheduling and cancelling the repeating 20-20-20 reminder alarm.
- * Every INTERVAL_MS, TimerReceiver fires and shows the break overlay.
- */
+/** Schedules the single repeating work -> break cycle using AlarmManager. */
 object TimerManager {
 
-    private const val INTERVAL_MS = 20 * 60 * 1000L // 20 minutes
-    private const val REQUEST_CODE = 1001
-    const val PREFS_NAME = "eyecare_prefs"
-    const val PREF_RUNNING = "timer_running"
+    private fun alarmPi(c: Context) = PendingIntent.getBroadcast(
+        c, 1001, Intent(c, TimerReceiver::class.java),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
 
-    private fun getPendingIntent(context: Context): PendingIntent {
-        val intent = Intent(context, TimerReceiver::class.java)
-        return PendingIntent.getBroadcast(
-            context,
-            REQUEST_CODE,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-    }
+    private fun am(c: Context) = c.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-    fun startTimer(context: Context) {
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val triggerAt = System.currentTimeMillis() + INTERVAL_MS
-        val pendingIntent = getPendingIntent(context)
+    private fun canExact(c: Context) =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.S || am(c).canScheduleExactAlarms()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (alarmManager.canScheduleExactAlarms()) {
-                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent)
-            } else {
-                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent)
-            }
+    private fun schedule(c: Context, triggerAt: Long) {
+        if (canExact(c)) {
+            am(c).setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, alarmPi(c))
         } else {
-            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent)
+            // No permission needed, exact, and allowed to start the overlay service from background.
+            val show = PendingIntent.getActivity(
+                c, 1002, Intent(c, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
+            )
+            am(c).setAlarmClock(AlarmManager.AlarmClockInfo(triggerAt, show), alarmPi(c))
         }
-
-        setRunning(context, true)
+        EyeStore.edit(c) { putBoolean("running", true); putLong("next_at", triggerAt) }
     }
 
-    fun stopTimer(context: Context) {
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        alarmManager.cancel(getPendingIntent(context))
-        setRunning(context, false)
+    fun start(c: Context, delayMs: Long) = schedule(c, System.currentTimeMillis() + delayMs)
+
+    fun stop(c: Context) {
+        am(c).cancel(alarmPi(c))
+        EyeStore.edit(c) { putBoolean("running", false) }
     }
 
-    fun isRunning(context: Context): Boolean {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getBoolean(PREF_RUNNING, false)
-    }
-
-    private fun setRunning(context: Context, running: Boolean) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(PREF_RUNNING, running).apply()
-    }
-
-    /** Reschedules the next reminder after one has just fired. */
-    fun rescheduleNext(context: Context) {
-        if (isRunning(context)) {
-            startTimer(context)
-        }
+    /** Alarm fired: record the break and schedule the next one AFTER the break ends. */
+    fun onFire(c: Context) {
+        val now = System.currentTimeMillis()
+        val breakMs = EyeStore.breakSec(c) * 1000L
+        val count = EyeStore.breaks(c) + 1
+        EyeStore.edit(c) { putLong("break_until", now + breakMs); putInt("breaks_completed", count) }
+        schedule(c, now + breakMs + EyeStore.workMin(c) * 60_000L)
     }
 }
