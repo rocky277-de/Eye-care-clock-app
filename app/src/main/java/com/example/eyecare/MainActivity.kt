@@ -16,6 +16,9 @@ import android.widget.NumberPicker
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
     private lateinit var countdownText: TextView
@@ -31,6 +34,7 @@ class MainActivity : AppCompatActivity() {
     private var timeLeftMs = 20 * 60 * 1000L
     private var isRunning = false
     private var breaksCompleted = 0
+    private var statsText: TextView? = null
 
     companion object {
         private const val PREF_BREAKS = "breaks_completed"
@@ -41,6 +45,7 @@ class MainActivity : AppCompatActivity() {
             if (intent.action == OverlayService.ACTION_BREAK_FINISHED) {
                 breaksCompleted = prefs.getInt(PREF_BREAKS, 0)
                 updateSessionText()
+                updateStats()
                 if (TimerManager.isRunning(this@MainActivity)) {
                     isRunning = true
                     statusText.text = "Reminder running"
@@ -59,6 +64,7 @@ class MainActivity : AppCompatActivity() {
         countdownText = findViewById(R.id.countdownText)
         statusText = findViewById(R.id.statusText)
         sessionText = findViewById(R.id.sessionText)
+        statsText = findViewById(R.id.statsText)
         startPauseButton = findViewById(R.id.startPauseButton)
         resetButton = findViewById(R.id.resetButton)
         workPicker = findViewById(R.id.workMinutesPicker)
@@ -68,6 +74,7 @@ class MainActivity : AppCompatActivity() {
         configurePickers()
         breaksCompleted = prefs.getInt(PREF_BREAKS, 0)
         updateSessionText()
+        updateStats()
         restoreTimerState()
 
         startPauseButton.setOnClickListener {
@@ -194,6 +201,40 @@ class MainActivity : AppCompatActivity() {
     private fun updateSessionText() {
         sessionText.text = "Breaks completed: $breaksCompleted"
     }
+
+    private fun dateKey(daysAgo: Int): String {
+        val calendar = Calendar.getInstance()
+        calendar.add(Calendar.DAY_OF_YEAR, -daysAgo)
+        return SimpleDateFormat("yyyy-MM-dd", Locale.US).format(calendar.time)
+    }
+
+    private fun completedForDay(daysAgo: Int): Int =
+        prefs.getInt("stats_completed_${dateKey(daysAgo)}", 0)
+
+    private fun skippedForDay(daysAgo: Int): Int =
+        prefs.getInt("stats_skipped_${dateKey(daysAgo)}", 0)
+
+    private fun updateStats() {
+        if (!::prefs.isInitialized || statsText == null) return
+        val todayCompleted = completedForDay(0)
+        val todaySkipped = skippedForDay(0)
+        val totalCompleted = (0..6).sumOf { completedForDay(it) }
+        val totalSkipped = (0..6).sumOf { skippedForDay(it) }
+
+        var streak = 0
+        for (day in 0..6) {
+            if (completedForDay(day) > 0) streak++ else break
+        }
+
+        val labels = arrayOf("Today", "Yesterday", "2d ago", "3d ago", "4d ago", "5d ago", "6d ago")
+        val history = (0..6).joinToString("  •  ") { day ->
+            "${labels[day]}: ${completedForDay(day)}✓/${skippedForDay(day)}×"
+        }
+
+        val dayWord = if (streak == 1) "day" else "days"
+        statsText?.text = "TODAY\nCompleted: $todayCompleted   Skipped: $todaySkipped\n\n7-DAY TOTAL\nCompleted: $totalCompleted   Skipped: $totalSkipped\nStreak: $streak $dayWord\n\n$history"
+    }
+
 
     override fun onStart() {
         super.onStart()
