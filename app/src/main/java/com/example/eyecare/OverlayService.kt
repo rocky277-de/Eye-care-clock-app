@@ -18,6 +18,9 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /** Foreground service for a movable, manually-started rest overlay. */
 class OverlayService : Service() {
@@ -279,8 +282,17 @@ class OverlayService : Service() {
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(NOTIFICATION_ID)
 
         val prefs = getSharedPreferences(TimerManager.PREFS_NAME, MODE_PRIVATE)
-        val count = prefs.getInt("breaks_completed", 0) + 1
-        prefs.edit().putInt("breaks_completed", count).apply()
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+        val completedKey = "stats_completed_$today"
+        val skippedKey = "stats_skipped_$today"
+        val editor = prefs.edit()
+        if (skipped) {
+            editor.putInt(skippedKey, prefs.getInt(skippedKey, 0) + 1)
+        } else {
+            editor.putInt(completedKey, prefs.getInt(completedKey, 0) + 1)
+            editor.putInt("breaks_completed", prefs.getInt("breaks_completed", 0) + 1)
+        }
+        editor.apply()
 
         TimerManager.rescheduleNext(this)
         sendBroadcast(
