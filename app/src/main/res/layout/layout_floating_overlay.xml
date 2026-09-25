@@ -1,18 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/overlayRoot"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="18dp"
-    android:background="#DD1F2937"
-    android:gravity="center">
+    android:padding="16dp"
+    android:background="#EE1F2937"
+    android:gravity="center"
+    android:elevation="12dp">
 
     <TextView
         android:id="@+id/overlayDragHandle"
         android:layout_width="match_parent"
-        android:layout_height="32dp"
+        android:layout_height="36dp"
         android:gravity="center"
-        android:text="☰  Drag"
+        android:text="☰  Drag anywhere"
         android:textColor="#9CA3AF"
         android:textSize="13sp" />
 
@@ -22,15 +24,16 @@
         android:layout_height="wrap_content"
         android:text="👁 Time for a break!"
         android:textColor="#FFFFFF"
-        android:textSize="18sp"
+        android:textSize="19sp"
         android:textStyle="bold" />
 
     <TextView
         android:id="@+id/overlayMessage"
-        android:layout_width="wrap_content"
+        android:layout_width="220dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        android:text="Rest timer is paused. Look away, then start when ready."
+        android:gravity="center"
+        android:text="Look away from the screen. Start when you are ready."
         android:textColor="#D1D5DB"
         android:textSize="14sp" />
 
@@ -41,10 +44,19 @@
         android:layout_marginTop="10dp"
         android:text="20"
         android:textColor="#22C55E"
-        android:textSize="28sp"
+        android:textSize="32sp"
         android:textStyle="bold" />
 
+    <TextView
+        android:id="@+id/overlayUnitText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="seconds"
+        android:textColor="#9CA3AF"
+        android:textSize="12sp" />
+
     <LinearLayout
+        android:id="@+id/restAdjustRow"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
@@ -53,27 +65,38 @@
 
         <Button
             android:id="@+id/decreaseRestButton"
-            android:layout_width="60dp"
+            android:layout_width="64dp"
             android:layout_height="wrap_content"
+            android:minHeight="44dp"
             android:text="-5" />
+
+        <TextView
+            android:id="@+id/restDurationLabel"
+            android:layout_width="70dp"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="20 sec"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold" />
 
         <Button
             android:id="@+id/increaseRestButton"
-            android:layout_width="60dp"
+            android:layout_width="64dp"
             android:layout_height="wrap_content"
+            android:minHeight="44dp"
             android:text="+5" />
     </LinearLayout>
 
     <Button
         android:id="@+id/startRestButton"
-        android:layout_width="wrap_content"
+        android:layout_width="190dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="10dp"
         android:text="Start Rest" />
 
     <Button
         android:id="@+id/overlayDismissButton"
-        android:layout_width="wrap_content"
+        android:layout_width="190dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
         android:text="Skip Rest" />
