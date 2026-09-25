@@ -13,6 +13,12 @@ object TimerManager {
     const val PREF_RUNNING = "timer_running"
     const val PREF_WORK_MINUTES = "work_minutes"
     const val PREF_REST_SECONDS = "rest_seconds"
+    const val PREF_NEXT_TRIGGER_AT = "next_trigger_at"
+    const val PREF_REMAINING_MS = "remaining_ms"
+    const val PREF_PHASE = "timer_phase"
+
+    const val PHASE_WORK = "work"
+    const val PHASE_BREAK = "break"
 
     const val DEFAULT_WORK_MINUTES = 20
     const val DEFAULT_REST_SECONDS = 20
@@ -47,9 +53,10 @@ object TimerManager {
         )
     }
 
-    fun startTimer(context: Context) {
+    fun startTimer(context: Context, remainingMs: Long? = null) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val triggerAt = System.currentTimeMillis() + getWorkMinutes(context) * 60_000L
+        val duration = (remainingMs ?: getRemainingMs(context)).let { if (it > 0L) it else getWorkMinutes(context) * 60_000L }
+        val triggerAt = System.currentTimeMillis() + duration
         val pendingIntent = getPendingIntent(context)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -61,22 +68,48 @@ object TimerManager {
         } else {
             alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent)
         }
-        setRunning(context, true)
+        prefs(context).edit().putBoolean(PREF_RUNNING, true).putString(PREF_PHASE, PHASE_WORK).putLong(PREF_NEXT_TRIGGER_AT, triggerAt).remove(PREF_REMAINING_MS).apply()
+    }
+
+    fun pauseTimer(context: Context, remainingMs: Long) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarmManager.cancel(getPendingIntent(context))
+        prefs(context).edit().putBoolean(PREF_RUNNING, false)
+            .putLong(PREF_REMAINING_MS, remainingMs.coerceAtLeast(0L))
+            .remove(PREF_NEXT_TRIGGER_AT).apply()
     }
 
     fun stopTimer(context: Context) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         alarmManager.cancel(getPendingIntent(context))
-        setRunning(context, false)
+        prefs(context).edit().putBoolean(PREF_RUNNING, false)
+            .putLong(PREF_REMAINING_MS, getWorkMinutes(context) * 60_000L)
+            .remove(PREF_NEXT_TRIGGER_AT).putString(PREF_PHASE, PHASE_WORK).apply()
+    }
+
+    fun markBreakReady(context: Context) {
+        prefs(context).edit().putString(PREF_PHASE, PHASE_BREAK)
+            .remove(PREF_NEXT_TRIGGER_AT).remove(PREF_REMAINING_MS).apply()
     }
 
     fun isRunning(context: Context): Boolean = prefs(context).getBoolean(PREF_RUNNING, false)
+
+    fun isWorkPhase(context: Context): Boolean =
+        prefs(context).getString(PREF_PHASE, PHASE_WORK) == PHASE_WORK
+
+    fun getRemainingMs(context: Context): Long {
+        val p = prefs(context)
+        val saved = p.getLong(PREF_REMAINING_MS, 0L)
+        if (saved > 0L) return saved
+        val trigger = p.getLong(PREF_NEXT_TRIGGER_AT, 0L)
+        return if (trigger > 0L) (trigger - System.currentTimeMillis()).coerceAtLeast(0L) else 0L
+    }
 
     private fun setRunning(context: Context, running: Boolean) {
         prefs(context).edit().putBoolean(PREF_RUNNING, running).apply()
     }
 
     fun rescheduleNext(context: Context) {
-        if (isRunning(context)) startTimer(context)
+        if (isRunning(context)) startTimer(context, getWorkMinutes(context) * 60_000L)
     }
 }
