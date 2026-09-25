@@ -12,6 +12,7 @@
     <!-- FIX: Added Foreground Service Permissions -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:allowBackup="true"
@@ -36,6 +37,15 @@
                 <action android:name="com.example.eyecare.ACTION_START_BREAK" />
                 <action android:name="com.example.eyecare.ACTION_SNOOZE" />
                 <action android:name="com.example.eyecare.ACTION_DISMISS" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".BootReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
 
