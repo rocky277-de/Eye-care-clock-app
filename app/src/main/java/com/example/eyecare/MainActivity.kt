@@ -67,7 +67,7 @@ class MainActivity : AppCompatActivity() {
         configurePickers()
         breaksCompleted = prefs.getInt(PREF_BREAKS, 0)
         updateSessionText()
-        resetLocalCountdown()
+        restoreTimerState()
 
         startPauseButton.setOnClickListener {
             if (isRunning) pauseTimer() else startTimer()
@@ -105,7 +105,8 @@ class MainActivity : AppCompatActivity() {
     private fun startTimer() {
         if (!requestOverlayPermissionIfNeeded()) return
         TimerManager.saveSettings(this, workPicker.value, restPicker.value)
-        timeLeftMs = workPicker.value * 60_000L
+        val saved = TimerManager.getRemainingMs(this)
+        timeLeftMs = if (!TimerManager.isRunning(this) && saved in 1 until workPicker.value * 60_000L) saved else workPicker.value * 60_000L
         isRunning = true
         statusText.text = "Reminder running"
         startPauseButton.text = "Pause"
@@ -133,7 +134,7 @@ class MainActivity : AppCompatActivity() {
         countDownTimer?.cancel()
         statusText.text = "Reminder paused"
         startPauseButton.text = "Start"
-        TimerManager.stopTimer(this)
+        TimerManager.pauseTimer(this, timeLeftMs)
     }
 
     private fun resetTimer() {
@@ -144,6 +145,30 @@ class MainActivity : AppCompatActivity() {
         startPauseButton.text = "Start"
         updateCountdownDisplay()
         TimerManager.stopTimer(this)
+    }
+
+    private fun restoreTimerState() {
+        if (!TimerManager.isRunning(this)) {
+            isRunning = false
+            timeLeftMs = TimerManager.getRemainingMs(this).takeIf { it > 0L } ?: TimerManager.getWorkMinutes(this) * 60_000L
+            statusText.text = "Reminder paused"
+            startPauseButton.text = "Start"
+            updateCountdownDisplay()
+            return
+        }
+        if (!TimerManager.isWorkPhase(this)) {
+            isRunning = true
+            statusText.text = "Break overlay ready"
+            startPauseButton.text = "Pause"
+            timeLeftMs = 0L
+            updateCountdownDisplay()
+            return
+        }
+        timeLeftMs = TimerManager.getRemainingMs(this).coerceAtLeast(1000L)
+        isRunning = true
+        statusText.text = "Reminder running"
+        startPauseButton.text = "Pause"
+        startLocalCountdown()
     }
 
     private fun resetLocalCountdown() {
@@ -169,6 +194,11 @@ class MainActivity : AppCompatActivity() {
             @Suppress("DEPRECATION")
             registerReceiver(breakFinishedReceiver, filter)
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::prefs.isInitialized && !isRunning) restoreTimerState()
     }
 
     override fun onStop() {
