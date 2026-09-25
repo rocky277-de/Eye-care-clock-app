@@ -11,6 +11,8 @@ class TimerReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (!TimerManager.isRunning(context)) return
 
+        TimerManager.markBreakReady(context)
+
         val canDrawOverlays = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Settings.canDrawOverlays(context)
         } else true
