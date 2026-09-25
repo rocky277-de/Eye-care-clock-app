@@ -14,10 +14,11 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.widget.Button
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
 
-/** Foreground service for the movable, manually-started rest overlay. */
+/** Foreground service for a movable, manually-started rest overlay. */
 class OverlayService : Service() {
     private var windowManager: WindowManager? = null
     private var overlayView: View? = null
@@ -48,7 +49,11 @@ class OverlayService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, "Eye Care Reminders", NotificationManager.IMPORTANCE_LOW)
+                NotificationChannel(
+                    CHANNEL_ID,
+                    "Eye Care Reminders",
+                    NotificationManager.IMPORTANCE_LOW
+                )
             )
         }
         NotificationCompat.Builder(this, CHANNEL_ID)
@@ -70,51 +75,71 @@ class OverlayService : Service() {
             WindowManager.LayoutParams.TYPE_PHONE
         }
 
+        val displayMetrics = resources.displayMetrics
+        val savedX = getSharedPreferences(TimerManager.PREFS_NAME, MODE_PRIVATE)
+            .getInt(PREF_OVERLAY_X, 0)
+        val savedY = getSharedPreferences(TimerManager.PREFS_NAME, MODE_PRIVATE)
+            .getInt(PREF_OVERLAY_Y, 180)
+
         params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             overlayType,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            val p = getSharedPreferences(TimerManager.PREFS_NAME, MODE_PRIVATE)
-            x = p.getInt(PREF_OVERLAY_X, 0)
-            y = p.getInt(PREF_OVERLAY_Y, 180)
+            x = savedX.coerceIn(0, displayMetrics.widthPixels - 80)
+            y = savedY.coerceIn(0, displayMetrics.heightPixels - 120)
         }
 
-        windowManager?.addView(overlayView, params)
+        try {
+            windowManager?.addView(overlayView, params)
+        } catch (_: WindowManager.BadTokenException) {
+            stopSelf()
+            return
+        }
 
         val countdownText = overlayView?.findViewById<TextView>(R.id.overlayCountdown)
-        val dragHandle = overlayView?.findViewById<View>(R.id.overlayDragHandle)
-        val decrease = overlayView?.findViewById<View>(R.id.decreaseRestButton)
-        val increase = overlayView?.findViewById<View>(R.id.increaseRestButton)
-        val startRest = overlayView?.findViewById<View>(R.id.startRestButton)
-        val skipRest = overlayView?.findViewById<View>(R.id.overlayDismissButton)
+        val durationLabel = overlayView?.findViewById<TextView>(R.id.restDurationLabel)
+        val decrease = overlayView?.findViewById<Button>(R.id.decreaseRestButton)
+        val increase = overlayView?.findViewById<Button>(R.id.increaseRestButton)
+        val startRest = overlayView?.findViewById<Button>(R.id.startRestButton)
+        val skipRest = overlayView?.findViewById<Button>(R.id.overlayDismissButton)
+        val dragRoot = overlayView?.findViewById<View>(R.id.overlayRoot)
 
         restSeconds = TimerManager.getRestSeconds(this)
-        countdownText?.text = restSeconds.toString()
+        updateDurationUi(countdownText, durationLabel)
 
         decrease?.setOnClickListener {
             if (!restStarted) {
                 restSeconds = (restSeconds - 5).coerceAtLeast(TimerManager.MIN_REST_SECONDS)
-                countdownText?.text = restSeconds.toString()
+                updateDurationUi(countdownText, durationLabel)
                 saveRestDuration()
             }
         }
         increase?.setOnClickListener {
             if (!restStarted) {
                 restSeconds = (restSeconds + 5).coerceAtMost(TimerManager.MAX_REST_SECONDS)
-                countdownText?.text = restSeconds.toString()
+                updateDurationUi(countdownText, durationLabel)
                 saveRestDuration()
             }
         }
         startRest?.setOnClickListener {
-            if (!restStarted) startRest(countdownText)
+            if (!restStarted) startRest(countdownText, durationLabel, decrease, increase, startRest)
         }
-        skipRest?.setOnClickListener { finishBreak() }
+        skipRest?.setOnClickListener { finishBreak(skipped = true) }
 
-        dragHandle?.setOnTouchListener(object : View.OnTouchListener {
+        installDragListener(dragRoot)
+    }
+
+    private fun updateDurationUi(countdownText: TextView?, durationLabel: TextView?) {
+        countdownText?.text = restSeconds.toString()
+        durationLabel?.text = "$restSeconds sec"
+    }
+
+    private fun installDragListener(dragView: View?) {
+        dragView?.setOnTouchListener(object : View.OnTouchListener {
             private var downX = 0f
             private var downY = 0f
             private var startX = 0
@@ -122,39 +147,60 @@ class OverlayService : Service() {
 
             override fun onTouch(v: View, event: MotionEvent): Boolean {
                 val p = params ?: return false
-                return when (event.actionMasked) {
+                when (event.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
                         downX = event.rawX
                         downY = event.rawY
                         startX = p.x
                         startY = p.y
-                        true
+                        return true
                     }
                     MotionEvent.ACTION_MOVE -> {
-                        p.x = startX + (event.rawX - downX).toInt()
-                        p.y = startY + (event.rawY - downY).toInt()
-                        windowManager?.updateViewLayout(overlayView, p)
-                        true
+                        val metrics = resources.displayMetrics
+                        p.x = (startX + event.rawX - downX).toInt()
+                            .coerceIn(0, (metrics.widthPixels - 100).coerceAtLeast(0))
+                        p.y = (startY + event.rawY - downY).toInt()
+                            .coerceIn(0, (metrics.heightPixels - 140).coerceAtLeast(0))
+                        try {
+                            windowManager?.updateViewLayout(overlayView, p)
+                        } catch (_: IllegalArgumentException) {
+                            return false
+                        }
+                        return true
                     }
-                    MotionEvent.ACTION_UP -> {
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                         savePosition()
-                        true
+                        return true
                     }
-                    else -> false
                 }
+                return false
             }
         })
     }
 
-    private fun startRest(countdownText: TextView?) {
+    private fun startRest(
+        countdownText: TextView?,
+        durationLabel: TextView?,
+        decrease: Button?,
+        increase: Button?,
+        startButton: Button?
+    ) {
         restStarted = true
+        decrease?.isEnabled = false
+        increase?.isEnabled = false
+        startButton?.isEnabled = false
+        startButton?.text = "Resting..."
+        durationLabel?.text = "Rest in progress"
         countdownText?.text = restSeconds.toString()
+
         countdownTimer = object : CountDownTimer(restSeconds * 1000L, 1000L) {
             override fun onTick(millisUntilFinished: Long) {
                 countdownText?.text = ((millisUntilFinished + 999L) / 1000L).toString()
             }
+
             override fun onFinish() {
-                finishBreak()
+                countdownText?.text = "0"
+                finishBreak(skipped = false)
             }
         }.start()
     }
@@ -171,22 +217,31 @@ class OverlayService : Service() {
             .apply()
     }
 
-    private fun finishBreak() {
+    private fun finishBreak(skipped: Boolean) {
         if (completed) return
         completed = true
         countdownTimer?.cancel()
+
         val prefs = getSharedPreferences(TimerManager.PREFS_NAME, MODE_PRIVATE)
         val count = prefs.getInt("breaks_completed", 0) + 1
         prefs.edit().putInt("breaks_completed", count).apply()
+
         TimerManager.rescheduleNext(this)
-        sendBroadcast(Intent(ACTION_BREAK_FINISHED).setPackage(packageName))
+        sendBroadcast(
+            Intent(ACTION_BREAK_FINISHED)
+                .setPackage(packageName)
+                .putExtra("skipped", skipped)
+        )
         stopSelf()
     }
 
     override fun onDestroy() {
         countdownTimer?.cancel()
         overlayView?.let {
-            try { windowManager?.removeView(it) } catch (_: IllegalArgumentException) { }
+            try {
+                windowManager?.removeView(it)
+            } catch (_: IllegalArgumentException) {
+            }
         }
         super.onDestroy()
     }
