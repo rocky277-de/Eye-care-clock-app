@@ -10,6 +10,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.provider.Settings
+import android.content.pm.PackageManager
 import android.widget.Button
 import android.widget.NumberPicker
 import android.widget.TextView
@@ -93,6 +94,14 @@ class MainActivity : AppCompatActivity() {
         restPicker.setOnValueChangedListener { _, _, _ -> save() }
     }
 
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf("android.permission.POST_NOTIFICATIONS"), 5001)
+        }
+    }
+
     private fun requestOverlayPermissionIfNeeded(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
             startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
@@ -103,6 +112,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startTimer() {
+        requestNotificationPermissionIfNeeded()
         if (!requestOverlayPermissionIfNeeded()) return
         TimerManager.saveSettings(this, workPicker.value, restPicker.value)
         val saved = TimerManager.getRemainingMs(this)
