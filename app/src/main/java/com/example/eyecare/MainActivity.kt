@@ -27,6 +27,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var sessionText: TextView
     private lateinit var startPauseButton: Button
     private lateinit var resetButton: Button
+    private lateinit var stopButton: Button
     private lateinit var workPicker: NumberPicker
     private lateinit var restPicker: NumberPicker
     private lateinit var prefs: SharedPreferences
@@ -68,6 +69,7 @@ class MainActivity : AppCompatActivity() {
         statsText = findViewById(R.id.statsText)
         startPauseButton = findViewById(R.id.startPauseButton)
         resetButton = findViewById(R.id.resetButton)
+        stopButton = findViewById(R.id.stopButton)
         findViewById<Button>(R.id.settingsButton).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
@@ -85,6 +87,7 @@ class MainActivity : AppCompatActivity() {
             if (isRunning) pauseTimer() else startTimer()
         }
         resetButton.setOnClickListener { resetTimer() }
+        stopButton.setOnClickListener { stopTimerCompletely() }
     }
 
     private fun configurePickers() {
@@ -156,6 +159,18 @@ class MainActivity : AppCompatActivity() {
         statusText.text = "Reminder paused"
         startPauseButton.text = "Start"
         TimerManager.pauseTimer(this, timeLeftMs)
+    }
+
+    private fun stopTimerCompletely() {
+        countDownTimer?.cancel()
+        countDownTimer = null
+        isRunning = false
+        timeLeftMs = TimerManager.getWorkMinutes(this) * 60_000L
+        statusText.text = "Reminder stopped"
+        startPauseButton.text = "Start"
+        updateCountdownDisplay()
+        TimerManager.stopTimer(this)
+        stopService(Intent(this, OverlayService::class.java))
     }
 
     private fun resetTimer() {
