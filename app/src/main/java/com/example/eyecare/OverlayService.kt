@@ -2,6 +2,7 @@ package com.example.eyecare
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -34,6 +35,8 @@ class OverlayService : Service() {
         private const val PREF_OVERLAY_X = "overlay_x"
         private const val PREF_OVERLAY_Y = "overlay_y"
         const val ACTION_BREAK_FINISHED = "com.example.eyecare.BREAK_FINISHED"
+        private const val ACTION_START_REST = "com.example.eyecare.START_REST"
+        private const val ACTION_SKIP_REST = "com.example.eyecare.SKIP_REST"
     }
 
     override fun onCreate() {
@@ -42,7 +45,22 @@ class OverlayService : Service() {
         showOverlay()
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_NOT_STICKY
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        when (intent?.action) {
+            ACTION_START_REST -> {
+                if (!restStarted && overlayView != null) {
+                    val countdown = overlayView?.findViewById<TextView>(R.id.overlayCountdown)
+                    val label = overlayView?.findViewById<TextView>(R.id.restDurationLabel)
+                    val decrease = overlayView?.findViewById<Button>(R.id.decreaseRestButton)
+                    val increase = overlayView?.findViewById<Button>(R.id.increaseRestButton)
+                    val start = overlayView?.findViewById<Button>(R.id.startRestButton)
+                    startRest(countdown, label, decrease, increase, start)
+                }
+            }
+            ACTION_SKIP_REST -> finishBreak(skipped = true)
+        }
+        return START_NOT_STICKY
+    }
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun buildNotification() = run {
@@ -61,7 +79,41 @@ class OverlayService : Service() {
             .setContentText("Rest timer is waiting to start")
             .setSmallIcon(android.R.drawable.ic_menu_view)
             .setOngoing(true)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .addAction(
+                0,
+                "Start Rest",
+                serviceAction(ACTION_START_REST, 3001)
+            )
+            .addAction(
+                0,
+                "Skip",
+                serviceAction(ACTION_SKIP_REST, 3002)
+            )
             .build()
+    }
+
+    private fun serviceAction(action: String, requestCode: Int): PendingIntent =
+        PendingIntent.getService(
+            this,
+            requestCode,
+            Intent(this, OverlayService::class.java).setAction(action),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+    private fun updateNotification(title: String, text: String, includeActions: Boolean) {
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setSmallIcon(android.R.drawable.ic_menu_view)
+            .setOngoing(true)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+        if (includeActions) {
+            builder.addAction(0, "Start Rest", serviceAction(ACTION_START_REST, 3001))
+                .addAction(0, "Skip", serviceAction(ACTION_SKIP_REST, 3002))
+        }
+        (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+            .notify(NOTIFICATION_ID, builder.build())
     }
 
     private fun showOverlay() {
@@ -186,6 +238,7 @@ class OverlayService : Service() {
         startButton: Button?
     ) {
         restStarted = true
+        updateNotification("Rest in progress", "Eye break: $restSeconds seconds remaining", false)
         decrease?.isEnabled = false
         increase?.isEnabled = false
         startButton?.isEnabled = false
@@ -195,7 +248,9 @@ class OverlayService : Service() {
 
         countdownTimer = object : CountDownTimer(restSeconds * 1000L, 1000L) {
             override fun onTick(millisUntilFinished: Long) {
-                countdownText?.text = ((millisUntilFinished + 999L) / 1000L).toString()
+                val seconds = ((millisUntilFinished + 999L) / 1000L)
+                countdownText?.text = seconds.toString()
+                updateNotification("Rest in progress", "Eye break: $seconds seconds remaining", false)
             }
 
             override fun onFinish() {
@@ -221,6 +276,7 @@ class OverlayService : Service() {
         if (completed) return
         completed = true
         countdownTimer?.cancel()
+        (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(NOTIFICATION_ID)
 
         val prefs = getSharedPreferences(TimerManager.PREFS_NAME, MODE_PRIVATE)
         val count = prefs.getInt("breaks_completed", 0) + 1
