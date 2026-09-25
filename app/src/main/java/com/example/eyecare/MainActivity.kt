@@ -15,6 +15,7 @@ import android.widget.Button
 import android.widget.NumberPicker
 import android.widget.TextView
 import android.widget.Toast
+
 import androidx.appcompat.app.AppCompatActivity
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -67,6 +68,9 @@ class MainActivity : AppCompatActivity() {
         statsText = findViewById(R.id.statsText)
         startPauseButton = findViewById(R.id.startPauseButton)
         resetButton = findViewById(R.id.resetButton)
+        findViewById<Button>(R.id.settingsButton).setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
         workPicker = findViewById(R.id.workMinutesPicker)
         restPicker = findViewById(R.id.restSecondsPicker)
 
