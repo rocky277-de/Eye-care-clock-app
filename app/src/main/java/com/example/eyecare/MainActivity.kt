@@ -14,6 +14,7 @@ import android.content.pm.PackageManager
 import android.widget.Button
 import android.widget.NumberPicker
 import android.widget.TextView
+import android.widget.Switch
 import android.widget.Toast
 
 import androidx.appcompat.app.AppCompatActivity
@@ -28,6 +29,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var startPauseButton: Button
     private lateinit var resetButton: Button
     private lateinit var stopButton: Button
+    private lateinit var focusModeSwitch: Switch
+    private lateinit var focusStatsText: TextView
     private lateinit var workPicker: NumberPicker
     private lateinit var restPicker: NumberPicker
     private lateinit var prefs: SharedPreferences
@@ -70,6 +73,8 @@ class MainActivity : AppCompatActivity() {
         startPauseButton = findViewById(R.id.startPauseButton)
         resetButton = findViewById(R.id.resetButton)
         stopButton = findViewById(R.id.stopButton)
+        focusModeSwitch = findViewById(R.id.focusModeSwitch)
+        focusStatsText = findViewById(R.id.focusStatsText)
         findViewById<Button>(R.id.settingsButton).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
@@ -81,6 +86,7 @@ class MainActivity : AppCompatActivity() {
         breaksCompleted = prefs.getInt(PREF_BREAKS, 0)
         updateSessionText()
         updateStats()
+        updateFocusUi()
         restoreTimerState()
 
         startPauseButton.setOnClickListener {
@@ -88,6 +94,12 @@ class MainActivity : AppCompatActivity() {
         }
         resetButton.setOnClickListener { resetTimer() }
         stopButton.setOnClickListener { stopTimerCompletely() }
+
+        focusModeSwitch.isChecked = TimerManager.isFocusModeEnabled(this)
+        focusModeSwitch.setOnCheckedChangeListener { _, enabled ->
+            TimerManager.setFocusModeEnabled(this, enabled)
+            updateFocusUi()
+        }
     }
 
     private fun configurePickers() {
@@ -136,6 +148,7 @@ class MainActivity : AppCompatActivity() {
         startPauseButton.text = "Pause"
         startLocalCountdown()
         TimerManager.startTimer(this)
+        updateFocusUi()
     }
 
     private fun startLocalCountdown() {
@@ -159,6 +172,7 @@ class MainActivity : AppCompatActivity() {
         statusText.text = "Reminder paused"
         startPauseButton.text = "Start"
         TimerManager.pauseTimer(this, timeLeftMs)
+        updateFocusUi()
     }
 
     private fun stopTimerCompletely() {
@@ -171,6 +185,7 @@ class MainActivity : AppCompatActivity() {
         updateCountdownDisplay()
         TimerManager.stopTimer(this)
         stopService(Intent(this, OverlayService::class.java))
+        updateFocusUi()
     }
 
     private fun resetTimer() {
@@ -181,6 +196,15 @@ class MainActivity : AppCompatActivity() {
         startPauseButton.text = "Start"
         updateCountdownDisplay()
         TimerManager.stopTimer(this)
+        updateFocusUi()
+    }
+
+    private fun updateFocusUi() {
+        if (!::focusStatsText.isInitialized) return
+        val minutes = TimerManager.getTodayFocusMinutes(this)
+        val goal = TimerManager.getFocusGoalMinutes(this)
+        val percent = ((minutes.toFloat() / goal.toFloat()) * 100f).toInt().coerceIn(0, 100)
+        focusStatsText.text = "FOCUS TODAY\n${minutes} min / ${goal} min goal\nProgress: ${percent}%"
     }
 
     private fun restoreTimerState() {
@@ -269,6 +293,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         if (::prefs.isInitialized && !isRunning) restoreTimerState()
+        if (::prefs.isInitialized) updateFocusUi()
     }
 
     override fun onStop() {
