@@ -16,6 +16,13 @@ object TimerManager {
     const val PREF_NEXT_TRIGGER_AT = "next_trigger_at"
     const val PREF_REMAINING_MS = "remaining_ms"
     const val PREF_PHASE = "timer_phase"
+    const val PREF_FOCUS_MODE_ENABLED = "focus_mode_enabled"
+    const val PREF_FOCUS_ACTIVE = "focus_active"
+    const val PREF_FOCUS_START_AT = "focus_start_at"
+    const val PREF_FOCUS_GOAL_MINUTES = "focus_goal_minutes"
+    const val DEFAULT_FOCUS_GOAL_MINUTES = 120
+    const val MIN_FOCUS_GOAL_MINUTES = 15
+    const val MAX_FOCUS_GOAL_MINUTES = 480
 
     const val PHASE_WORK = "work"
     const val PHASE_BREAK = "break"
@@ -68,10 +75,12 @@ object TimerManager {
         } else {
             alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent)
         }
+        if (isFocusModeEnabled(context)) startFocus(context)
         prefs(context).edit().putBoolean(PREF_RUNNING, true).putString(PREF_PHASE, PHASE_WORK).putLong(PREF_NEXT_TRIGGER_AT, triggerAt).remove(PREF_REMAINING_MS).apply()
     }
 
     fun pauseTimer(context: Context, remainingMs: Long) {
+        pauseFocus(context)
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         alarmManager.cancel(getPendingIntent(context))
         prefs(context).edit().putBoolean(PREF_RUNNING, false)
@@ -80,6 +89,7 @@ object TimerManager {
     }
 
     fun stopTimer(context: Context) {
+        stopFocus(context)
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         alarmManager.cancel(getPendingIntent(context))
         prefs(context).edit().putBoolean(PREF_RUNNING, false)
@@ -112,4 +122,81 @@ object TimerManager {
     fun rescheduleNext(context: Context) {
         if (isRunning(context)) startTimer(context, getWorkMinutes(context) * 60_000L)
     }
+
+    fun isFocusModeEnabled(context: Context): Boolean =
+        prefs(context).getBoolean(PREF_FOCUS_MODE_ENABLED, false)
+
+    fun setFocusModeEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(PREF_FOCUS_MODE_ENABLED, enabled).apply()
+        if (!enabled) pauseFocus(context)
+    }
+
+    fun isFocusActive(context: Context): Boolean =
+        prefs(context).getBoolean(PREF_FOCUS_ACTIVE, false)
+
+    fun getFocusGoalMinutes(context: Context): Int =
+        prefs(context).getInt(PREF_FOCUS_GOAL_MINUTES, DEFAULT_FOCUS_GOAL_MINUTES)
+            .coerceIn(MIN_FOCUS_GOAL_MINUTES, MAX_FOCUS_GOAL_MINUTES)
+
+    fun saveFocusGoalMinutes(context: Context, minutes: Int) {
+        prefs(context).edit().putInt(
+            PREF_FOCUS_GOAL_MINUTES,
+            minutes.coerceIn(MIN_FOCUS_GOAL_MINUTES, MAX_FOCUS_GOAL_MINUTES)
+        ).apply()
+    }
+
+    fun startFocus(context: Context) {
+        if (!isFocusModeEnabled(context) || isFocusActive(context)) return
+        prefs(context).edit()
+            .putBoolean(PREF_FOCUS_ACTIVE, true)
+            .putLong(PREF_FOCUS_START_AT, System.currentTimeMillis())
+            .apply()
+    }
+
+    fun pauseFocus(context: Context) {
+        if (!isFocusActive(context)) return
+        accumulateFocus(context)
+        prefs(context).edit()
+            .putBoolean(PREF_FOCUS_ACTIVE, false)
+            .remove(PREF_FOCUS_START_AT)
+            .apply()
+    }
+
+    fun stopFocus(context: Context) {
+        if (!isFocusActive(context)) return
+        accumulateFocus(context)
+        prefs(context).edit()
+            .putBoolean(PREF_FOCUS_ACTIVE, false)
+            .remove(PREF_FOCUS_START_AT)
+            .apply()
+    }
+
+    private fun accumulateFocus(context: Context) {
+        val p = prefs(context)
+        val start = p.getLong(PREF_FOCUS_START_AT, 0L)
+        if (start <= 0L) return
+        val elapsed = (System.currentTimeMillis() - start).coerceAtLeast(0L)
+        val key = focusTotalKey()
+        p.edit().putLong(key, p.getLong(key, 0L) + elapsed).apply()
+    }
+
+    private fun focusTotalKey(): String {
+        val calendar = java.util.Calendar.getInstance()
+        val date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(calendar.time)
+        return "focus_total_ms_$date"
+    }
+
+    fun getTodayFocusMs(context: Context): Long {
+        val p = prefs(context)
+        var total = p.getLong(focusTotalKey(), 0L)
+        if (isFocusActive(context)) {
+            val start = p.getLong(PREF_FOCUS_START_AT, 0L)
+            if (start > 0L) total += (System.currentTimeMillis() - start).coerceAtLeast(0L)
+        }
+        return total
+    }
+
+    fun getTodayFocusMinutes(context: Context): Int =
+        (getTodayFocusMs(context) / 60_000L).toInt()
+
 }
