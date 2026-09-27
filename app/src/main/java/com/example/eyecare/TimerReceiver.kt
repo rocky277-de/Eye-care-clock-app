@@ -11,7 +11,10 @@ class TimerReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (!TimerManager.isRunning(context)) return
 
-        TimerManager.pauseFocus(context)
+        if (FocusManager.isEnabled(context)) {
+            FocusManager.recordCompletedSession(context, TimerManager.getWorkMinutes(context))
+        }
+
         TimerManager.markBreakReady(context)
 
         val canDrawOverlays = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -26,6 +29,5 @@ class TimerReceiver : BroadcastReceiver() {
                 context.startService(serviceIntent)
             }
         }
-        // Do not schedule the next work interval until the user finishes or skips rest.
     }
 }
