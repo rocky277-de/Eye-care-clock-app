@@ -1,7 +1,7 @@
 package com.example.eyecare
 
-import android.os.Bundle
 import android.content.Intent
+import android.os.Bundle
 import android.provider.Settings
 import android.widget.Button
 import android.widget.NumberPicker
@@ -14,7 +14,6 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var restPicker: NumberPicker
     private lateinit var focusGoalPicker: NumberPicker
     private lateinit var longBreakPicker: NumberPicker
-    private lateinit var focusGoalPicker: NumberPicker
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,7 +23,6 @@ class SettingsActivity : AppCompatActivity() {
         restPicker = findViewById(R.id.settingsRestPicker)
         focusGoalPicker = findViewById(R.id.focusGoalPicker)
         longBreakPicker = findViewById(R.id.longBreakPicker)
-        focusGoalPicker = findViewById(R.id.focusGoalPicker)
 
         workPicker.minValue = TimerManager.MIN_WORK_MINUTES
         workPicker.maxValue = TimerManager.MAX_WORK_MINUTES
@@ -44,20 +42,17 @@ class SettingsActivity : AppCompatActivity() {
         longBreakPicker.value = FocusManager.getLongBreakMinutes(this)
         longBreakPicker.wrapSelectorWheel = false
 
-        focusGoalPicker.minValue = TimerManager.MIN_FOCUS_GOAL_MINUTES
-        focusGoalPicker.maxValue = TimerManager.MAX_FOCUS_GOAL_MINUTES
-        focusGoalPicker.value = TimerManager.getFocusGoalMinutes(this)
-
         findViewById<Switch>(R.id.focusModeSwitch).apply {
             isChecked = FocusManager.isEnabled(this@SettingsActivity)
-            setOnCheckedChangeListener { _, checked -> FocusManager.setEnabled(this@SettingsActivity, checked) }
+            setOnCheckedChangeListener { _, checked ->
+                FocusManager.setEnabled(this@SettingsActivity, checked)
+            }
         }
 
         findViewById<Button>(R.id.saveSettingsButton).setOnClickListener {
             TimerManager.saveSettings(this, workPicker.value, restPicker.value)
             FocusManager.setGoalMinutes(this, focusGoalPicker.value)
             FocusManager.setLongBreakMinutes(this, longBreakPicker.value)
-            TimerManager.saveFocusGoalMinutes(this, focusGoalPicker.value)
             Toast.makeText(this, "Settings saved", Toast.LENGTH_SHORT).show()
             finish()
         }
@@ -70,9 +65,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         findViewById<Button>(R.id.resetStatsButton).setOnClickListener {
-            getSharedPreferences(TimerManager.PREFS_NAME, MODE_PRIVATE).edit()
-                .clear()
-                .apply()
+            getSharedPreferences(TimerManager.PREFS_NAME, MODE_PRIVATE).edit().clear().apply()
             Toast.makeText(this, "Timer settings and statistics reset", Toast.LENGTH_SHORT).show()
         }
 
