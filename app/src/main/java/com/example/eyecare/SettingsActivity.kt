@@ -1,6 +1,8 @@
 package com.example.eyecare
 
 import android.os.Bundle
+import android.content.Intent
+import android.provider.Settings
 import android.widget.Button
 import android.widget.NumberPicker
 import android.widget.Switch
@@ -42,6 +44,20 @@ class SettingsActivity : AppCompatActivity() {
                 .clear()
                 .apply()
             Toast.makeText(this, "Timer settings and statistics reset", Toast.LENGTH_SHORT).show()
+        }
+
+        findViewById<Switch>(R.id.blockYoutubeShortsSwitch).apply {
+            isChecked = getSharedPreferences(TimerManager.PREFS_NAME, MODE_PRIVATE)
+                .getBoolean("block_youtube_shorts", false)
+            setOnCheckedChangeListener { _, checked ->
+                getSharedPreferences(TimerManager.PREFS_NAME, MODE_PRIVATE).edit()
+                    .putBoolean("block_youtube_shorts", checked)
+                    .apply()
+            }
+        }
+
+        findViewById<Button>(R.id.enableShortsBlockerButton).setOnClickListener {
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
 
         findViewById<Switch>(R.id.keepOverlayPositionSwitch).apply {
