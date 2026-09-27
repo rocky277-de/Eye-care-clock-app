@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity
 class SettingsActivity : AppCompatActivity() {
     private lateinit var workPicker: NumberPicker
     private lateinit var restPicker: NumberPicker
+    private lateinit var focusGoalPicker: NumberPicker
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -19,6 +20,7 @@ class SettingsActivity : AppCompatActivity() {
 
         workPicker = findViewById(R.id.settingsWorkPicker)
         restPicker = findViewById(R.id.settingsRestPicker)
+        focusGoalPicker = findViewById(R.id.focusGoalPicker)
 
         workPicker.minValue = TimerManager.MIN_WORK_MINUTES
         workPicker.maxValue = TimerManager.MAX_WORK_MINUTES
@@ -28,8 +30,13 @@ class SettingsActivity : AppCompatActivity() {
         restPicker.maxValue = TimerManager.MAX_REST_SECONDS
         restPicker.value = TimerManager.getRestSeconds(this)
 
+        focusGoalPicker.minValue = TimerManager.MIN_FOCUS_GOAL_MINUTES
+        focusGoalPicker.maxValue = TimerManager.MAX_FOCUS_GOAL_MINUTES
+        focusGoalPicker.value = TimerManager.getFocusGoalMinutes(this)
+
         findViewById<Button>(R.id.saveSettingsButton).setOnClickListener {
             TimerManager.saveSettings(this, workPicker.value, restPicker.value)
+            TimerManager.saveFocusGoalMinutes(this, focusGoalPicker.value)
             Toast.makeText(this, "Settings saved", Toast.LENGTH_SHORT).show()
             finish()
         }
