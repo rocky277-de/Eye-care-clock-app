@@ -295,6 +295,7 @@ class OverlayService : Service() {
         editor.apply()
 
         TimerManager.rescheduleNext(this)
+        if (TimerManager.isFocusModeEnabled(this)) TimerManager.startFocus(this)
         sendBroadcast(
             Intent(ACTION_BREAK_FINISHED)
                 .setPackage(packageName)
