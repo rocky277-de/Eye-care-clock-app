@@ -46,6 +46,21 @@
             android:layout_marginBottom="16dp"/>
 
         <Switch
+            android:id="@+id/blockYoutubeShortsSwitch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Block YouTube Shorts"
+            android:textColor="#FFFFFF"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/enableShortsBlockerButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Enable Shorts Blocker"
+            android:layout_marginBottom="16dp"/>
+
+        <Switch
             android:id="@+id/keepOverlayPositionSwitch"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
