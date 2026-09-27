@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">EyeCareApp</string>
+    <string name="accessibility_service_description">Blocks YouTube Shorts when Shorts blocking is enabled.</string>
 </resources>
