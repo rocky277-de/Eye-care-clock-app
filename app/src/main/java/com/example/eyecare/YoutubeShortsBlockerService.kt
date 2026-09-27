@@ -51,9 +51,13 @@ class YoutubeShortsBlockerService : AccessibilityService() {
         }
     }
 
-    private fun isBlockerEnabled(): Boolean =
-        getSharedPreferences(TimerManager.PREFS_NAME, MODE_PRIVATE)
-            .getBoolean(PREF_BLOCK_SHORTS, false)
+    private fun isBlockerEnabled(): Boolean {
+        val prefs = getSharedPreferences(TimerManager.PREFS_NAME, MODE_PRIVATE)
+        val manual = prefs.getBoolean(PREF_BLOCK_SHORTS, false)
+        val focus = prefs.getBoolean(TimerManager.PREF_FOCUS_MODE_ENABLED, false) &&
+            prefs.getBoolean(TimerManager.PREF_FOCUS_ACTIVE, false)
+        return manual || focus
+    }
 
     private fun containsShortsLabel(node: AccessibilityNodeInfo?): Boolean {
         if (node == null) return false
