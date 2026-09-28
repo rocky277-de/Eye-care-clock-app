@@ -1,4 +1,8 @@
 <resources>
     <string name="app_name">EyeCareApp</string>
     <string name="accessibility_service_description">Blocks YouTube Shorts when Shorts blocking is enabled.</string>
+    <string name="accessibility_disclosure_title">Shorts &amp; Focus blocking access</string>
+    <string name="accessibility_disclosure_message">Eye Care uses Android Accessibility access to read on-screen app labels and window content only while the blocking feature is enabled. It uses this information on your device to detect YouTube Shorts and selected apps so it can show the blocker. Eye Care does not send or share this accessibility data.</string>
+    <string name="accessibility_disclosure_accept">Continue to Accessibility Settings</string>
+    <string name="accessibility_disclosure_cancel">Not now</string>
 </resources>
