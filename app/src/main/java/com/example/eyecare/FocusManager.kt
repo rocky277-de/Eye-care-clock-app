@@ -152,6 +152,42 @@ object FocusManager {
     fun getAverageDailyMinutes(context: Context): Int =
         getSevenDayMinutes(context) / 7
 
+    fun getBreakCompleted(context: Context, daysAgo: Int = 0): Int =
+        getDailyBreakStat(context, "stats_completed_", daysAgo)
+
+    fun getBreakSkipped(context: Context, daysAgo: Int = 0): Int =
+        getDailyBreakStat(context, "stats_skipped_", daysAgo)
+
+    fun getBreakTotal(context: Context, days: Int = 7): Int =
+        (0 until days.coerceAtLeast(1)).sumOf { getBreakCompleted(context, it) + getBreakSkipped(context, it) }
+
+    fun getBreakCompletionRate(context: Context, days: Int = 7): Int {
+        val completed = (0 until days.coerceAtLeast(1)).sumOf { getBreakCompleted(context, it) }
+        val total = getBreakTotal(context, days)
+        return if (total > 0) ((completed * 100f) / total).toInt() else 0
+    }
+
+    fun getBreakSkipRate(context: Context, days: Int = 7): Int {
+        val skipped = (0 until days.coerceAtLeast(1)).sumOf { getBreakSkipped(context, it) }
+        val total = getBreakTotal(context, days)
+        return if (total > 0) ((skipped * 100f) / total).toInt() else 0
+    }
+
+    fun getBreakCompletionDays(context: Context, days: Int = 7): Int {
+        return (0 until days.coerceAtLeast(1)).count { getBreakCompleted(context, it) > 0 }
+    }
+
+    fun shouldRecommendBreak(context: Context): Boolean =
+        isEnabled(context) && getTodaySessions(context) > 0 &&
+            TimerManager.isRunning(context) && TimerManager.isWorkPhase(context)
+
+    private fun getDailyBreakStat(context: Context, prefix: String, daysAgo: Int): Int {
+        val calendar = java.util.Calendar.getInstance()
+        calendar.add(java.util.Calendar.DAY_OF_YEAR, -daysAgo)
+        val key = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(calendar.time)
+        return prefs(context).getInt(prefix + key, 0)
+    }
+
     fun shouldUseLongBreak(context: Context): Boolean =
         isEnabled(context) && getTodaySessions(context) > 0 &&
             getTodaySessions(context) % SESSIONS_BEFORE_LONG_BREAK == 0
