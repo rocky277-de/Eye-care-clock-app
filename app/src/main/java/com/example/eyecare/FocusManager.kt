@@ -70,6 +70,27 @@ object FocusManager {
             .apply()
     }
 
+    fun getMinutesForDay(context: Context, daysAgo: Int): Int {
+        val calendar = java.util.Calendar.getInstance()
+        calendar.add(java.util.Calendar.DAY_OF_YEAR, -daysAgo)
+        val key = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(calendar.time)
+        return (prefs(context).getLong(PREF_FOCUS_MINUTES_PREFIX + key, 0L) / 60_000L).toInt()
+    }
+
+    fun getSevenDayMinutes(context: Context): Int =
+        (0..6).sumOf { getMinutesForDay(context, it) }
+
+    fun getSevenDaySessions(context: Context): Int {
+        val calendar = java.util.Calendar.getInstance()
+        return (0..6).sumOf { daysAgo ->
+            val c = java.util.Calendar.getInstance()
+            c.add(java.util.Calendar.DAY_OF_YEAR, -daysAgo)
+            val key = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(c.time)
+            prefs(context).getInt(PREF_SESSIONS_TODAY + "_" + key, 0)
+        }
+    }
+
+
     fun shouldUseLongBreak(context: Context): Boolean =
         isEnabled(context) && getTodaySessions(context) > 0 &&
             getTodaySessions(context) % SESSIONS_BEFORE_LONG_BREAK == 0
