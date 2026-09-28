@@ -213,8 +213,11 @@ class MainActivity : AppCompatActivity() {
         val weekMinutes = FocusManager.getSevenDayMinutes(this)
         val weekSessions = FocusManager.getSevenDaySessions(this)
         val todaySessions = FocusManager.getTodaySessions(this)
+        val avgDaily = FocusManager.getAverageDailyMinutes(this)
+        val longestStreak = FocusManager.getLongestFocusStreak(this)
+        val distractionRate = if (weekMinutes > 0) (blockedWeek * 60f / weekMinutes) else 0f
 
-        focusStatsText.text = "FOCUS TODAY\n\${minutes} min / \${goal} min goal\nProgress: \${percent}%\nSessions: $todaySessions\n\n7-DAY FOCUS\n\${weekMinutes} min • $weekSessions sessions\n\nBLOCKED DISTRACTIONS\nToday: $blockedToday • 7-day: $blockedWeek"
+        focusStatsText.text = "FOCUS TODAY\\n\${minutes} min / \${goal} min goal\\nProgress: \${percent}%\\nSessions: $todaySessions\\n\\n7-DAY FOCUS\\n\${weekMinutes} min • $weekSessions sessions\\n\\nFOCUS INSIGHTS\\nAverage: $avgDaily min/day\\nLongest active streak: $longestStreak day(s)\\nBlocked attempts: $blockedWeek\\nDistraction rate: \${String.format(Locale.US, "%.1f", distractionRate)} attempts/hour\\n\\nBLOCKED DISTRACTIONS\\nToday: $blockedToday • 7-day: $blockedWeek"
         updateFocusHistory(goal)
     }
 
