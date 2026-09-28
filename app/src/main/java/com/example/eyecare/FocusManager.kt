@@ -27,10 +27,10 @@ object FocusManager {
         SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
 
     fun isEnabled(context: Context): Boolean =
-        prefs(context).getBoolean(PREF_FOCUS_MODE, false)
+        TimerManager.isFocusModeEnabled(context)
 
     fun setEnabled(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(PREF_FOCUS_MODE, enabled).apply()
+        TimerManager.setFocusModeEnabled(context, enabled)
     }
 
     fun getGoalMinutes(context: Context): Int =
