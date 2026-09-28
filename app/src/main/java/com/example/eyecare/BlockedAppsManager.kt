@@ -5,6 +5,7 @@ import android.content.Context
 object BlockedAppsManager {
     private const val PREF_KEY = "focus_blocked_apps"
     private const val PREF_ATTEMPTS_PREFIX = "focus_block_attempts_"
+    private const val PREF_APP_ATTEMPTS_PREFIX = "focus_block_app_attempts_"
 
     fun getBlockedPackages(context: Context): Set<String> {
         return context.getSharedPreferences(TimerManager.PREFS_NAME, Context.MODE_PRIVATE)
@@ -21,10 +22,15 @@ object BlockedAppsManager {
     fun isBlocked(context: Context, packageName: String): Boolean =
         TimerManager.isFocusActive(context) && getBlockedPackages(context).contains(packageName)
 
-    fun recordBlockedAttempt(context: Context) {
+    fun recordBlockedAttempt(context: Context, packageName: String? = null) {
         val key = PREF_ATTEMPTS_PREFIX + todayKey()
         val prefs = context.getSharedPreferences(TimerManager.PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putInt(key, prefs.getInt(key, 0) + 1).apply()
+        val editor = prefs.edit().putInt(key, prefs.getInt(key, 0) + 1)
+        if (!packageName.isNullOrBlank()) {
+            val appKey = PREF_APP_ATTEMPTS_PREFIX + todayKey() + "_" + packageName
+            editor.putInt(appKey, prefs.getInt(appKey, 0) + 1)
+        }
+        editor.apply()
     }
 
     fun getTodayAttempts(context: Context): Int =
@@ -37,6 +43,24 @@ object BlockedAppsManager {
 
     fun getSevenDayAttempts(context: Context): Int =
         (0..6).sumOf { getAttempts(context, it) }
+
+    fun getThirtyDayAttempts(context: Context): Int =
+        (0..29).sumOf { getAttempts(context, it) }
+
+    fun getAppAttempts(context: Context, packageName: String, days: Int = 7): Int {
+        val prefs = context.getSharedPreferences(TimerManager.PREFS_NAME, Context.MODE_PRIVATE)
+        val end = (days - 1).coerceAtLeast(0)
+        return (0..end).sumOf { day ->
+            prefs.getInt(PREF_APP_ATTEMPTS_PREFIX + dayKey(day) + "_" + packageName, 0)
+        }
+    }
+
+    fun getMostDistractingApp(context: Context, days: Int = 7): Pair<String, Int>? {
+        return getBlockedPackages(context)
+            .map { it to getAppAttempts(context, it, days) }
+            .filter { it.second > 0 }
+            .maxByOrNull { it.second }
+    }
 
     private fun todayKey(): String = dayKey(0)
 
