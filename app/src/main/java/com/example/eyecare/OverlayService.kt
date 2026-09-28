@@ -243,8 +243,12 @@ class OverlayService : Service() {
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
         val completedKey = "stats_completed_" + today
         val skippedKey = "stats_skipped_" + today
+        val missedKey = "stats_missed_" + today
         val editor = prefs.edit()
-        if (skipped) editor.putInt(skippedKey, prefs.getInt(skippedKey, 0) + 1)
+        if (skipped) {
+            editor.putInt(skippedKey, prefs.getInt(skippedKey, 0) + 1)
+            if (!restStarted) editor.putInt(missedKey, prefs.getInt(missedKey, 0) + 1)
+        }
         else {
             editor.putInt(completedKey, prefs.getInt(completedKey, 0) + 1)
             editor.putInt("breaks_completed", prefs.getInt("breaks_completed", 0) + 1)
