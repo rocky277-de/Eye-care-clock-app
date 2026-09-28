@@ -134,6 +134,15 @@ object TimerManager {
 
     fun isRunning(context: Context): Boolean = prefs(context).getBoolean(PREF_RUNNING, false)
 
+    /**
+     * Returns true only when the currently persisted alarm deadline has arrived.
+     * This protects against a stale/racing AlarmManager broadcast opening a break early.
+     */
+    fun isTriggerDue(context: Context): Boolean {
+        val triggerAt = safeLong(prefs(context).getLong(PREF_NEXT_TRIGGER_AT, 0L))
+        return triggerAt > 0L && System.currentTimeMillis() >= triggerAt
+    }
+
     fun isWorkPhase(context: Context): Boolean =
         prefs(context).getString(PREF_PHASE, PHASE_WORK) == PHASE_WORK
 
