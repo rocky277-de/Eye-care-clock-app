@@ -67,8 +67,8 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         findViewById<Button>(R.id.resetStatsButton).setOnClickListener {
-            getSharedPreferences(TimerManager.PREFS_NAME, MODE_PRIVATE).edit().clear().apply()
-            Toast.makeText(this, "Timer settings and statistics reset", Toast.LENGTH_SHORT).show()
+            TimerManager.resetTimerAndStatistics(this)
+            Toast.makeText(this, "Timer and statistics reset", Toast.LENGTH_SHORT).show()
         }
 
         findViewById<Switch>(R.id.blockYoutubeShortsSwitch).apply {
