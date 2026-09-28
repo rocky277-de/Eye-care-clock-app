@@ -151,7 +151,7 @@ class YoutubeShortsBlockerService : AccessibilityService() {
             windowManager?.addView(view, params)
             blockerView = view
             if (BlockedAppsManager.isBlocked(this, packageName)) {
-                BlockedAppsManager.recordBlockedAttempt(this)
+                BlockedAppsManager.recordBlockedAttempt(this, packageName)
             }
         } catch (_: Exception) {
             blockerView = null
