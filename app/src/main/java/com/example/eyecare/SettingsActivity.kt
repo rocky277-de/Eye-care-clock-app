@@ -3,6 +3,8 @@ package com.example.eyecare
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
 import android.widget.Button
 import android.widget.NumberPicker
 import android.widget.Switch
@@ -83,6 +85,12 @@ class SettingsActivity : AppCompatActivity() {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
 
+        findViewById<Button>(R.id.selectBlockedAppsButton).setOnClickListener {
+            showBlockedAppsPicker()
+        }
+
+        updateBlockedAppsSummary()
+
         findViewById<Switch>(R.id.keepOverlayPositionSwitch).apply {
             isChecked = getSharedPreferences(TimerManager.PREFS_NAME, MODE_PRIVATE)
                 .getBoolean("keep_overlay_position", true)
@@ -92,5 +100,49 @@ class SettingsActivity : AppCompatActivity() {
                     .apply()
             }
         }
+    private fun updateBlockedAppsSummary() {
+        val count = BlockedAppsManager.getBlockedPackages(this).size
+        findViewById<android.widget.TextView>(R.id.blockedAppsSummary).text =
+            if (count == 0) "No apps selected" else "$count app(s) selected"
+    }
+
+    private fun showBlockedAppsPicker() {
+        val pm = packageManager
+        val apps = pm.queryIntentActivities(
+            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),
+            PackageManager.MATCH_ALL
+        )
+            .map { it.activityInfo.applicationInfo }
+            .filter { it.packageName != packageName }
+            .distinctBy { it.packageName }
+            .sortedBy { it.loadLabel(pm).toString().lowercase() }
+
+        val names = apps.map { it.loadLabel(pm).toString() }.toTypedArray()
+        val packages = apps.map { it.packageName }
+        val selected = BlockedAppsManager.getBlockedPackages(this)
+
+        val checked = BooleanArray(packages.size) { selected.contains(packages[it]) }
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Blocked Apps during Focus")
+            .setMultiChoiceItems(names, checked) { _, which, isChecked ->
+                checked[which] = isChecked
+            }
+            .setPositiveButton("Save") { _, _ ->
+                BlockedAppsManager.setBlockedPackages(
+                    this,
+                    packages.indices.filter { checked[it] }.map { packages[it] }.toSet()
+                )
+                updateBlockedAppsSummary()
+                Toast.makeText(this, "Blocked apps saved", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::workPicker.isInitialized) updateBlockedAppsSummary()
     }
 }
+
