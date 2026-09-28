@@ -14,6 +14,8 @@ object TimerManager {
     const val PREF_WORK_MINUTES = "work_minutes"
     const val PREF_REST_SECONDS = "rest_seconds"
     const val PREF_NEXT_TRIGGER_AT = "next_trigger_at"
+    const val PREF_TIMER_STARTED_AT = "timer_started_at"
+    const val PREF_TIMER_DURATION_MS = "timer_duration_ms"
     const val PREF_REMAINING_MS = "remaining_ms"
     const val PREF_PHASE = "timer_phase"
     const val PREF_FOCUS_MODE_ENABLED = "focus_mode_enabled"
@@ -76,7 +78,14 @@ object TimerManager {
             alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent)
         }
         if (isFocusModeEnabled(context)) startFocus(context)
-        prefs(context).edit().putBoolean(PREF_RUNNING, true).putString(PREF_PHASE, PHASE_WORK).putLong(PREF_NEXT_TRIGGER_AT, triggerAt).remove(PREF_REMAINING_MS).apply()
+        prefs(context).edit()
+            .putBoolean(PREF_RUNNING, true)
+            .putString(PREF_PHASE, PHASE_WORK)
+            .putLong(PREF_NEXT_TRIGGER_AT, triggerAt)
+            .putLong(PREF_TIMER_STARTED_AT, System.currentTimeMillis())
+            .putLong(PREF_TIMER_DURATION_MS, duration)
+            .remove(PREF_REMAINING_MS)
+            .apply()
     }
 
     fun pauseTimer(context: Context, remainingMs: Long) {
@@ -85,7 +94,10 @@ object TimerManager {
         alarmManager.cancel(getPendingIntent(context))
         prefs(context).edit().putBoolean(PREF_RUNNING, false)
             .putLong(PREF_REMAINING_MS, remainingMs.coerceAtLeast(0L))
-            .remove(PREF_NEXT_TRIGGER_AT).apply()
+            .remove(PREF_NEXT_TRIGGER_AT)
+            .remove(PREF_TIMER_STARTED_AT)
+            .remove(PREF_TIMER_DURATION_MS)
+            .apply()
     }
 
     fun stopTimer(context: Context) {
@@ -94,14 +106,23 @@ object TimerManager {
         alarmManager.cancel(getPendingIntent(context))
         prefs(context).edit().putBoolean(PREF_RUNNING, false)
             .putLong(PREF_REMAINING_MS, getWorkMinutes(context) * 60_000L)
-            .remove(PREF_NEXT_TRIGGER_AT).putString(PREF_PHASE, PHASE_WORK).apply()
+            .remove(PREF_NEXT_TRIGGER_AT)
+            .remove(PREF_TIMER_STARTED_AT)
+            .remove(PREF_TIMER_DURATION_MS)
+            .putString(PREF_PHASE, PHASE_WORK)
+            .apply()
     }
 
     fun markBreakReady(context: Context) {
         // Focus time belongs to the work interval, not the eye/rest break.
         pauseFocus(context)
-        prefs(context).edit().putString(PREF_PHASE, PHASE_BREAK)
-            .remove(PREF_NEXT_TRIGGER_AT).remove(PREF_REMAINING_MS).apply()
+        prefs(context).edit()
+            .putString(PREF_PHASE, PHASE_BREAK)
+            .remove(PREF_NEXT_TRIGGER_AT)
+            .remove(PREF_REMAINING_MS)
+            .remove(PREF_TIMER_STARTED_AT)
+            .remove(PREF_TIMER_DURATION_MS)
+            .apply()
     }
 
     fun isRunning(context: Context): Boolean = prefs(context).getBoolean(PREF_RUNNING, false)
@@ -114,7 +135,14 @@ object TimerManager {
         val saved = p.getLong(PREF_REMAINING_MS, 0L)
         if (saved > 0L) return saved
         val trigger = p.getLong(PREF_NEXT_TRIGGER_AT, 0L)
-        return if (trigger > 0L) (trigger - System.currentTimeMillis()).coerceAtLeast(0L) else 0L
+        if (trigger > 0L) return (trigger - System.currentTimeMillis()).coerceAtLeast(0L)
+
+        val startedAt = p.getLong(PREF_TIMER_STARTED_AT, 0L)
+        val duration = p.getLong(PREF_TIMER_DURATION_MS, 0L)
+        if (startedAt > 0L && duration > 0L) {
+            return (startedAt + duration - System.currentTimeMillis()).coerceAtLeast(0L)
+        }
+        return 0L
     }
 
     private fun setRunning(context: Context, running: Boolean) {
@@ -122,7 +150,8 @@ object TimerManager {
     }
 
     fun rescheduleNext(context: Context) {
-        if (isRunning(context)) startTimer(context, getWorkMinutes(context) * 60_000L)
+        if (!isRunning(context)) return
+        startTimer(context, getWorkMinutes(context) * 60_000L)
     }
 
     fun isFocusModeEnabled(context: Context): Boolean =
