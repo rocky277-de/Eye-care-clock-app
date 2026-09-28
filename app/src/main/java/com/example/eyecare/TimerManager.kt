@@ -39,6 +39,9 @@ object TimerManager {
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+    private fun safeLong(value: Long, fallback: Long = 0L): Long =
+        if (value >= 0L) value else fallback
+
     fun getWorkMinutes(context: Context): Int =
         prefs(context).getInt(PREF_WORK_MINUTES, DEFAULT_WORK_MINUTES)
             .coerceIn(MIN_WORK_MINUTES, MAX_WORK_MINUTES)
@@ -64,7 +67,11 @@ object TimerManager {
 
     fun startTimer(context: Context, remainingMs: Long? = null) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val duration = (remainingMs ?: getRemainingMs(context)).let { if (it > 0L) it else getWorkMinutes(context) * 60_000L }
+        val requested = safeLong(remainingMs ?: getRemainingMs(context))
+        val maxDuration = getWorkMinutes(context) * 60_000L
+        val duration = requested.coerceIn(1L, maxDuration).let {
+            if (remainingMs == null && !isRunning(context)) maxDuration else it
+        }
         val triggerAt = System.currentTimeMillis() + duration
         val pendingIntent = getPendingIntent(context)
 
@@ -132,13 +139,13 @@ object TimerManager {
 
     fun getRemainingMs(context: Context): Long {
         val p = prefs(context)
-        val saved = p.getLong(PREF_REMAINING_MS, 0L)
+        val saved = safeLong(p.getLong(PREF_REMAINING_MS, 0L))
         if (saved > 0L) return saved
-        val trigger = p.getLong(PREF_NEXT_TRIGGER_AT, 0L)
+        val trigger = safeLong(p.getLong(PREF_NEXT_TRIGGER_AT, 0L))
         if (trigger > 0L) return (trigger - System.currentTimeMillis()).coerceAtLeast(0L)
 
-        val startedAt = p.getLong(PREF_TIMER_STARTED_AT, 0L)
-        val duration = p.getLong(PREF_TIMER_DURATION_MS, 0L)
+        val startedAt = safeLong(p.getLong(PREF_TIMER_STARTED_AT, 0L))
+        val duration = safeLong(p.getLong(PREF_TIMER_DURATION_MS, 0L))
         if (startedAt > 0L && duration > 0L) {
             return (startedAt + duration - System.currentTimeMillis()).coerceAtLeast(0L)
         }
@@ -208,30 +215,98 @@ object TimerManager {
 
     private fun accumulateFocus(context: Context) {
         val p = prefs(context)
-        val start = p.getLong(PREF_FOCUS_START_AT, 0L)
+        val start = safeLong(p.getLong(PREF_FOCUS_START_AT, 0L))
         if (start <= 0L) return
-        val elapsed = (System.currentTimeMillis() - start).coerceAtLeast(0L)
-        val key = focusTotalKey()
-        p.edit().putLong(key, p.getLong(key, 0L) + elapsed).apply()
+
+        val now = System.currentTimeMillis()
+        if (now <= start) return
+
+        // A focus interval can cross midnight. Split elapsed time by local date
+        // so yesterday's minutes never leak into today's statistics.
+        val editor = p.edit()
+        var cursor = start
+        val maxElapsed = getWorkMinutes(context) * 60_000L
+        val end = minOf(now, start + maxElapsed)
+
+        while (cursor < end) {
+            val date = java.util.Calendar.getInstance().apply { timeInMillis = cursor }
+            val nextDay = (date.clone() as java.util.Calendar).apply {
+                add(java.util.Calendar.DAY_OF_YEAR, 1)
+                set(java.util.Calendar.HOUR_OF_DAY, 0)
+                set(java.util.Calendar.MINUTE, 0)
+                set(java.util.Calendar.SECOND, 0)
+                set(java.util.Calendar.MILLISECOND, 0)
+            }.timeInMillis
+            val segmentEnd = minOf(end, nextDay)
+            val segment = (segmentEnd - cursor).coerceAtLeast(0L)
+            val key = focusTotalKey(cursor)
+            val existing = safeLong(p.getLong(key, 0L))
+            editor.putLong(key, existing + segment)
+            cursor = segmentEnd
+        }
+        editor.apply()
     }
 
-    private fun focusTotalKey(): String {
-        val calendar = java.util.Calendar.getInstance()
-        val date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(calendar.time)
+    private fun focusTotalKey(atMillis: Long = System.currentTimeMillis()): String {
+        val date = java.text.SimpleDateFormat(
+            "yyyy-MM-dd",
+            java.util.Locale.US
+        ).format(java.util.Date(atMillis))
         return "focus_total_ms_$date"
     }
 
     fun getTodayFocusMs(context: Context): Long {
         val p = prefs(context)
-        var total = p.getLong(focusTotalKey(), 0L)
+        var total = safeLong(p.getLong(focusTotalKey(), 0L))
         if (isFocusActive(context)) {
             val start = p.getLong(PREF_FOCUS_START_AT, 0L)
-            if (start > 0L) total += (System.currentTimeMillis() - start).coerceAtLeast(0L)
+            if (start > 0L) total += (System.currentTimeMillis() - start).coerceAtLeast(0L).coerceAtMost(getWorkMinutes(context) * 60_000L)
         }
         return total
     }
 
     fun getTodayFocusMinutes(context: Context): Int =
-        (getTodayFocusMs(context) / 60_000L).toInt()
+        (getTodayFocusMs(context) / 60_000L).toInt().coerceAtLeast(0)
+
+    fun recoverFocusAfterBoot(context: Context) {
+        val p = prefs(context)
+        if (!isFocusActive(context)) return
+
+        // Time while the device was rebooting must not be counted as focus time.
+        // Resume a fresh focus interval from the moment boot recovery runs.
+        p.edit()
+            .putBoolean(PREF_FOCUS_ACTIVE, false)
+            .remove(PREF_FOCUS_START_AT)
+            .apply()
+        if (isFocusModeEnabled(context) && isRunning(context) && isWorkPhase(context)) {
+            startFocus(context)
+        }
+    }
+
+    fun resetTimerAndStatistics(context: Context) {
+        val p = prefs(context)
+        val preserved = mapOf(
+            PREF_WORK_MINUTES to getWorkMinutes(context),
+            PREF_REST_SECONDS to getRestSeconds(context),
+            PREF_FOCUS_MODE_ENABLED to isFocusModeEnabled(context),
+            PREF_FOCUS_GOAL_MINUTES to getFocusGoalMinutes(context)
+        )
+        val blockedApps = p.getStringSet("focus_blocked_apps", emptySet())?.toSet() ?: emptySet()
+        val shortsEnabled = p.getBoolean("block_youtube_shorts", false)
+        val keepPosition = p.getBoolean("keep_overlay_position", true)
+
+        p.edit().clear()
+            .putInt(PREF_WORK_MINUTES, preserved[PREF_WORK_MINUTES] as Int)
+            .putInt(PREF_REST_SECONDS, preserved[PREF_REST_SECONDS] as Int)
+            .putBoolean(PREF_FOCUS_MODE_ENABLED, preserved[PREF_FOCUS_MODE_ENABLED] as Boolean)
+            .putInt(PREF_FOCUS_GOAL_MINUTES, preserved[PREF_FOCUS_GOAL_MINUTES] as Int)
+            .putStringSet("focus_blocked_apps", blockedApps)
+            .putBoolean("block_youtube_shorts", shortsEnabled)
+            .putBoolean("keep_overlay_position", keepPosition)
+            .putBoolean(PREF_RUNNING, false)
+            .putString(PREF_PHASE, PHASE_WORK)
+            .putLong(PREF_REMAINING_MS, getWorkMinutes(context) * 60_000L)
+            .apply()
+    }
 
 }
