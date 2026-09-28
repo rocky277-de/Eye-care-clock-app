@@ -205,22 +205,62 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateFocusUi() {
         if (!::focusStatsText.isInitialized) return
+
         val minutes = TimerManager.getTodayFocusMinutes(this)
         val goal = TimerManager.getFocusGoalMinutes(this)
         val percent = ((minutes.toFloat() / goal.toFloat()) * 100f).toInt().coerceIn(0, 100)
         val blockedToday = BlockedAppsManager.getTodayAttempts(this)
         val blockedWeek = BlockedAppsManager.getSevenDayAttempts(this)
+        val blockedMonth = BlockedAppsManager.getThirtyDayAttempts(this)
         val weekMinutes = FocusManager.getSevenDayMinutes(this)
         val weekSessions = FocusManager.getSevenDaySessions(this)
-        val todaySessions = FocusManager.getTodaySessions(this)
+        val monthMinutes = FocusManager.getThirtyDayMinutes(this)
+        val monthSessions = FocusManager.getThirtyDaySessions(this)
         val avgDaily = FocusManager.getAverageDailyMinutes(this)
+        val avgSession = FocusManager.getAverageSessionMinutes(this)
         val longestStreak = FocusManager.getLongestFocusStreak(this)
-        val distractionRate = if (weekMinutes > 0) (blockedWeek * 60f / weekMinutes) else 0f
+        val goalDays = FocusManager.getGoalCompletionDays(this, 7)
+        val bestDay = FocusManager.getBestFocusDay(this, 30)
+        val previousWeekMinutes = FocusManager.getMinutesForRange(this, 7, 13)
+        val trendPercent = if (previousWeekMinutes > 0) ((weekMinutes - previousWeekMinutes).toFloat() / previousWeekMinutes.toFloat()) * 100f else if (weekMinutes > 0) 100f else 0f
+        val trendLabel = when {
+            weekMinutes == 0 && previousWeekMinutes == 0 -> "No data"
+            trendPercent > 0.5f -> "Up " + String.format(Locale.US, "%.0f", trendPercent) + "%"
+            trendPercent < -0.5f -> "Down " + String.format(Locale.US, "%.0f", kotlin.math.abs(trendPercent)) + "%"
+            else -> "Stable"
+        }
+        val distractionRate = if (weekMinutes > 0) blockedWeek * 60f / weekMinutes else 0f
+        val mostDistracting = BlockedAppsManager.getMostDistractingApp(this, 7)
+        val distractingLabel = mostDistracting?.let {
+            val name = try { packageManager.getApplicationLabel(packageManager.getApplicationInfo(it.first, 0)).toString() } catch (_: Exception) { it.first }
+            name + " (" + it.second + " attempts)"
+        } ?: "None"
+        val bestDayLabel = when (bestDay.first) {
+            0 -> "Today"
+            1 -> "Yesterday"
+            else -> bestDay.first.toString() + "d ago"
+        }
+        focusStatsText.text = "FOCUS TODAY\n" +
+            minutes.toString() + " min / " + goal + " min goal\nProgress: " + percent + "%\n" +
+            "Sessions: " + FocusManager.getTodaySessions(this) + "\n\n" +
+            "7-DAY INSIGHTS\n" +
+            weekMinutes + " min • " + weekSessions + " sessions\n" +
+            "Average: " + avgDaily + " min/day\n" +
+            "Avg session: " + avgSession + " min\n" +
+            "Goal reached: " + goalDays + "/7 days\n" +
+            "Weekly trend: " + trendLabel + "\n" +
+            "Longest active streak: " + longestStreak + " day(s)\n\n" +
+            "30-DAY OVERVIEW\n" +
+            monthMinutes + " min • " + monthSessions + " sessions\n" +
+            "Best day: " + bestDayLabel + " (" + bestDay.second + " min)\n" +
+            "Blocked attempts: " + blockedMonth + "\n\n" +
+            "DISTRACTION INSIGHTS\n" +
+            "Top blocked app: " + distractingLabel + "\n" +
+            "Rate: " + String.format(Locale.US, "%.1f", distractionRate) + " attempts/hour\n" +
+            "Today: " + blockedToday + " • 7-day: " + blockedWeek
 
-        focusStatsText.text = "FOCUS TODAY\\n\${minutes} min / \${goal} min goal\\nProgress: \${percent}%\\nSessions: $todaySessions\\n\\n7-DAY FOCUS\\n\${weekMinutes} min • $weekSessions sessions\\n\\nFOCUS INSIGHTS\\nAverage: $avgDaily min/day\\nLongest active streak: $longestStreak day(s)\\nBlocked attempts: $blockedWeek\\nDistraction rate: \${String.format(Locale.US, "%.1f", distractionRate)} attempts/hour\\n\\nBLOCKED DISTRACTIONS\\nToday: $blockedToday • 7-day: $blockedWeek"
         updateFocusHistory(goal)
     }
-
     private fun updateFocusHistory(goal: Int) {
         if (!::focusHistoryContainer.isInitialized) return
         focusHistoryContainer.removeAllViews()
