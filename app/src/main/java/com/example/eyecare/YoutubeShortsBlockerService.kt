@@ -53,7 +53,7 @@ class YoutubeShortsBlockerService : AccessibilityService() {
                 // Avoid blocking the normal YouTube home screen just because its
                 // bottom navigation contains the word "Shorts".
                 if (isLikelyShortsScreen(getRootInActiveWindow())) {
-                    showBlocker()
+                    showBlocker(YOUTUBE_PACKAGE)
                 }
             }
         }
