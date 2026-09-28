@@ -91,6 +91,50 @@ object FocusManager {
     }
 
 
+    fun getMinutesForRange(context: Context, startDaysAgo: Int, endDaysAgo: Int): Int =
+        (startDaysAgo..endDaysAgo).sumOf { getMinutesForDay(context, it) }
+
+    fun getSessionsForDay(context: Context, daysAgo: Int): Int {
+        val calendar = java.util.Calendar.getInstance()
+        calendar.add(java.util.Calendar.DAY_OF_YEAR, -daysAgo)
+        val key = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(calendar.time)
+        return prefs(context).getInt(PREF_SESSIONS_TODAY + "_" + key, 0)
+    }
+
+    fun getSessionCountForRange(context: Context, startDaysAgo: Int, endDaysAgo: Int): Int =
+        (startDaysAgo..endDaysAgo).sumOf { getSessionsForDay(context, it) }
+
+    fun getThirtyDayMinutes(context: Context): Int = getMinutesForRange(context, 0, 29)
+
+    fun getThirtyDaySessions(context: Context): Int = getSessionCountForRange(context, 0, 29)
+
+    fun getBestFocusDay(context: Context, days: Int = 30): Pair<Int, Int> {
+        val end = (days - 1).coerceAtLeast(0)
+        var bestDay = 0
+        var bestMinutes = -1
+        for (day in 0..end) {
+            val minutes = getMinutesForDay(context, day)
+            if (minutes > bestMinutes) {
+                bestMinutes = minutes
+                bestDay = day
+            }
+        }
+        return bestDay to bestMinutes.coerceAtLeast(0)
+    }
+
+    fun getAverageSessionMinutes(context: Context, days: Int = 7): Int {
+        val end = (days - 1).coerceAtLeast(0)
+        val minutes = getMinutesForRange(context, 0, end)
+        val sessions = getSessionCountForRange(context, 0, end)
+        return if (sessions > 0) minutes / sessions else 0
+    }
+
+    fun getGoalCompletionDays(context: Context, days: Int = 7): Int {
+        val end = (days - 1).coerceAtLeast(0)
+        val goal = getGoalMinutes(context)
+        return (0..end).count { getMinutesForDay(context, it) >= goal }
+    }
+
     fun getLongestFocusStreak(context: Context): Int {
         var streak = 0
         var best = 0
