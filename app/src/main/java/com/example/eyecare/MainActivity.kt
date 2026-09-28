@@ -206,7 +206,20 @@ class MainActivity : AppCompatActivity() {
         val percent = ((minutes.toFloat() / goal.toFloat()) * 100f).toInt().coerceIn(0, 100)
         val blockedToday = BlockedAppsManager.getTodayAttempts(this)
         val blockedWeek = BlockedAppsManager.getSevenDayAttempts(this)
-        focusStatsText.text = "FOCUS TODAY\n${minutes} min / ${goal} min goal\nProgress: ${percent}%\n\nBLOCKED DISTRACTIONS\nToday: $blockedToday\n7-day total: $blockedWeek"
+        val weekMinutes = FocusManager.getSevenDayMinutes(this)
+        val weekSessions = FocusManager.getSevenDaySessions(this)
+        val todaySessions = FocusManager.getTodaySessions(this)
+
+        val history = (0..6).joinToString("  •  ") { day ->
+            val label = when (day) {
+                0 -> "Today"
+                1 -> "Yday"
+                else -> "${day}d"
+            }
+            "$label: ${FocusManager.getMinutesForDay(this, day)}m"
+        }
+
+        focusStatsText.text = "FOCUS TODAY\n${minutes} min / ${goal} min goal\nProgress: ${percent}%\nSessions: $todaySessions\n\n7-DAY FOCUS\n${weekMinutes} min • $weekSessions sessions\n$history\n\nBLOCKED DISTRACTIONS\nToday: $blockedToday • 7-day: $blockedWeek"
     }
 
     private fun restoreTimerState() {
