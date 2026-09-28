@@ -94,18 +94,37 @@ class OverlayService : Service() {
         )
 
     private fun updateNotification(title: String, text: String, includeActions: Boolean) {
+        ensureNotificationChannel()
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
             .setContentText(text)
             .setSmallIcon(android.R.drawable.ic_menu_view)
             .setOngoing(true)
+            .setOnlyAlertOnce(true)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
         if (includeActions) {
             builder.addAction(0, "Start Rest", serviceAction(ACTION_START_REST, 3001))
                 .addAction(0, "Skip", serviceAction(ACTION_SKIP_REST, 3002))
         }
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
             .notify(NOTIFICATION_ID, builder.build())
+    }
+
+    private fun ensureNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(
+                NotificationChannel(
+                    CHANNEL_ID,
+                    "Eye Care Reminders",
+                    NotificationManager.IMPORTANCE_LOW
+                ).apply {
+                    description = "Eye break and Focus Mode timer updates"
+                    setShowBadge(false)
+                }
+            )
+        }
     }
 
     private fun showOverlay() {
@@ -218,6 +237,7 @@ class OverlayService : Service() {
             }
             override fun onFinish() {
                 countdown?.text = "0"
+                updateNotification("Break complete", "Returning to your next eye-care interval", false)
                 finishBreak(skipped = false)
             }
         }.start()
