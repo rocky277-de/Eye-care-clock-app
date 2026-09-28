@@ -93,6 +93,8 @@ class SettingsActivity : AppCompatActivity() {
 
         updateBlockedAppsSummary()
         updateBatteryOptimizationStatus()
+        updateExactAlarmStatus()
+        updateNotificationStatus()
 
         findViewById<Button>(R.id.batteryOptimizationButton).setOnClickListener {
             try {
@@ -100,6 +102,14 @@ class SettingsActivity : AppCompatActivity() {
             } catch (_: Exception) {
                 startActivity(Intent(Settings.ACTION_SETTINGS))
             }
+        }
+
+        findViewById<Button>(R.id.exactAlarmButton).setOnClickListener {
+            openExactAlarmSettings()
+        }
+
+        findViewById<Button>(R.id.notificationSettingsButton).setOnClickListener {
+            openNotificationSettings()
         }
 
         findViewById<Switch>(R.id.keepOverlayPositionSwitch).apply {
@@ -110,6 +120,58 @@ class SettingsActivity : AppCompatActivity() {
                     .putBoolean("keep_overlay_position", checked)
                     .apply()
             }
+        }
+    }
+
+    private fun updateExactAlarmStatus() {
+        val status = findViewById<android.widget.TextView>(R.id.exactAlarmStatus)
+        val allowed = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val alarmManager = getSystemService(ALARM_SERVICE) as android.app.AlarmManager
+            alarmManager.canScheduleExactAlarms()
+        } else true
+        status.text = if (allowed) {
+            "Exact alarms: allowed"
+        } else {
+            "Exact alarms: not allowed — Android may delay reminders"
+        }
+    }
+
+    private fun openExactAlarmSettings() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                startActivity(
+                    Intent(
+                        Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                        android.net.Uri.parse("package:$packageName")
+                    )
+                )
+            } else {
+                startActivity(Intent(Settings.ACTION_SETTINGS))
+            }
+        } catch (_: Exception) {
+            startActivity(Intent(Settings.ACTION_SETTINGS))
+        }
+    }
+
+    private fun updateNotificationStatus() {
+        val enabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            (getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager)
+                .areNotificationsEnabled()
+        } else true
+        findViewById<android.widget.TextView>(R.id.notificationStatus).text =
+            if (enabled) "Notifications: enabled" else
+                "Notifications: disabled — break updates may be hidden"
+    }
+
+    private fun openNotificationSettings() {
+        try {
+            startActivity(
+                Intent(
+                    Settings.ACTION_APP_NOTIFICATION_SETTINGS
+                ).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+            )
+        } catch (_: Exception) {
+            startActivity(Intent(Settings.ACTION_SETTINGS))
         }
     }
 
@@ -172,6 +234,8 @@ class SettingsActivity : AppCompatActivity() {
         if (::workPicker.isInitialized) {
             updateBlockedAppsSummary()
             updateBatteryOptimizationStatus()
+            updateExactAlarmStatus()
+            updateNotificationStatus()
         }
     }
 }
