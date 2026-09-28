@@ -264,6 +264,7 @@ class MainActivity : AppCompatActivity() {
             "Completion rate: " + FocusManager.getBreakCompletionRate(this, 7) + "%\n" +
             "Skip rate: " + FocusManager.getBreakSkipRate(this, 7) + "%\n" +
             "Days with completed breaks: " + FocusManager.getBreakCompletionDays(this, 7) + "/7\n" +
+            "Missed before start: " + (0..6).sumOf { FocusManager.getBreakMissed(this, it) } + "\n" +
             "Recommendation: " + if (FocusManager.shouldRecommendBreak(this)) "Take your next break when the timer ends." else "No break needed right now."
 
         updateFocusHistory(goal)
