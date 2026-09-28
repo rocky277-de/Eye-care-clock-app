@@ -12,6 +12,8 @@ import android.os.CountDownTimer
 import android.provider.Settings
 import android.content.pm.PackageManager
 import android.widget.Button
+import android.widget.CheckBox
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.NumberPicker
@@ -34,6 +36,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var focusModeSwitch: Switch
     private lateinit var focusStatsText: TextView
     private lateinit var focusHistoryContainer: LinearLayout
+    private lateinit var checklistContainer: LinearLayout
+    private lateinit var checklistInput: EditText
+    private lateinit var checklistProgressText: TextView
+    private lateinit var clearCompletedButton: Button
     private lateinit var workPicker: NumberPicker
     private lateinit var restPicker: NumberPicker
     private lateinit var prefs: SharedPreferences
@@ -79,6 +85,10 @@ class MainActivity : AppCompatActivity() {
         focusModeSwitch = findViewById(R.id.focusModeSwitch)
         focusStatsText = findViewById(R.id.focusStatsText)
         focusHistoryContainer = findViewById(R.id.focusHistoryContainer)
+        checklistContainer = findViewById(R.id.checklistContainer)
+        checklistInput = findViewById(R.id.checklistInput)
+        checklistProgressText = findViewById(R.id.checklistProgressText)
+        clearCompletedButton = findViewById(R.id.clearCompletedButton)
         findViewById<Button>(R.id.settingsButton).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
@@ -91,6 +101,7 @@ class MainActivity : AppCompatActivity() {
         updateSessionText()
         updateStats()
         updateFocusUi()
+        renderDailyChecklist()
         restoreTimerState()
 
         startPauseButton.setOnClickListener {
@@ -98,6 +109,26 @@ class MainActivity : AppCompatActivity() {
         }
         resetButton.setOnClickListener { resetTimer() }
         stopButton.setOnClickListener { stopTimerCompletely() }
+
+        findViewById<Button>(R.id.addChecklistButton).setOnClickListener {
+            val title = checklistInput.text.toString()
+            if (DailyChecklistManager.addTask(this, title)) {
+                checklistInput.text.clear()
+                renderDailyChecklist()
+            } else {
+                Toast.makeText(this, "Enter a task (max 120 characters)", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        clearCompletedButton.setOnClickListener {
+            DailyChecklistManager.clearCompleted(this)
+            renderDailyChecklist()
+        }
+
+        checklistInput.setOnEditorActionListener { _, _, _ ->
+            findViewById<Button>(R.id.addChecklistButton).performClick()
+            true
+        }
 
         focusModeSwitch.isChecked = TimerManager.isFocusModeEnabled(this)
         focusModeSwitch.setOnCheckedChangeListener { _, enabled ->
@@ -308,6 +339,65 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun renderDailyChecklist() {
+        if (!::checklistContainer.isInitialized) return
+        val tasks = DailyChecklistManager.getTodayTasks(this)
+        checklistContainer.removeAllViews()
+
+        val completed = tasks.count { it.completed }
+        checklistProgressText.text = completed.toString() + "/" + tasks.size.toString()
+
+        if (tasks.isEmpty()) {
+            val empty = TextView(this).apply {
+                text = "No tasks yet. Add your first task above."
+                setTextColor(android.graphics.Color.GRAY)
+                textSize = 12f
+                setPadding(0, 8, 0, 8)
+            }
+            checklistContainer.addView(empty)
+            clearCompletedButton.isEnabled = false
+            return
+        }
+
+        clearCompletedButton.isEnabled = completed > 0
+
+        tasks.forEach { task ->
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(0, 2, 0, 2)
+            }
+
+            val checkBox = CheckBox(this).apply {
+                text = task.title
+                isChecked = task.completed
+                setTextColor(android.graphics.Color.WHITE)
+                textSize = 14f
+                setPadding(0, 0, 4, 0)
+                setOnCheckedChangeListener { _, checked ->
+                    DailyChecklistManager.setCompleted(this@MainActivity, task.id, checked)
+                    renderDailyChecklist()
+                }
+            }
+            row.addView(checkBox, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+
+            val deleteButton = Button(this).apply {
+                text = "×"
+                textSize = 18f
+                minWidth = 44
+                minHeight = 44
+                setPadding(0, 0, 0, 0)
+                contentDescription = "Delete task"
+                setOnClickListener {
+                    DailyChecklistManager.deleteTask(this@MainActivity, task.id)
+                    renderDailyChecklist()
+                }
+            }
+            row.addView(deleteButton, LinearLayout.LayoutParams(44, 48))
+            checklistContainer.addView(row)
+        }
+    }
+
     private fun restoreTimerState() {
         if (!TimerManager.isRunning(this)) {
             isRunning = false
@@ -398,6 +488,7 @@ class MainActivity : AppCompatActivity() {
             // screen lock, or process recreation.
             restoreTimerState()
             updateFocusUi()
+            renderDailyChecklist()
         }
     }
 
