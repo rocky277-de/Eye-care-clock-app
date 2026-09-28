@@ -393,8 +393,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (::prefs.isInitialized && !isRunning) restoreTimerState()
-        if (::prefs.isInitialized) updateFocusUi()
+        if (::prefs.isInitialized) {
+            // Persisted timer state is the source of truth after backgrounding,
+            // screen lock, or process recreation.
+            restoreTimerState()
+            updateFocusUi()
+        }
     }
 
     override fun onStop() {
