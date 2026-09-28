@@ -4,6 +4,7 @@ import android.content.Context
 
 object BlockedAppsManager {
     private const val PREF_KEY = "focus_blocked_apps"
+    private const val PREF_ATTEMPTS_PREFIX = "focus_block_attempts_"
 
     fun getBlockedPackages(context: Context): Set<String> {
         return context.getSharedPreferences(TimerManager.PREFS_NAME, Context.MODE_PRIVATE)
@@ -19,4 +20,29 @@ object BlockedAppsManager {
 
     fun isBlocked(context: Context, packageName: String): Boolean =
         TimerManager.isFocusActive(context) && getBlockedPackages(context).contains(packageName)
+
+    fun recordBlockedAttempt(context: Context) {
+        val key = PREF_ATTEMPTS_PREFIX + todayKey()
+        val prefs = context.getSharedPreferences(TimerManager.PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(key, prefs.getInt(key, 0) + 1).apply()
+    }
+
+    fun getTodayAttempts(context: Context): Int =
+        context.getSharedPreferences(TimerManager.PREFS_NAME, Context.MODE_PRIVATE)
+            .getInt(PREF_ATTEMPTS_PREFIX + todayKey(), 0)
+
+    fun getAttempts(context: Context, daysAgo: Int): Int =
+        context.getSharedPreferences(TimerManager.PREFS_NAME, Context.MODE_PRIVATE)
+            .getInt(PREF_ATTEMPTS_PREFIX + dayKey(daysAgo), 0)
+
+    fun getSevenDayAttempts(context: Context): Int =
+        (0..6).sumOf { getAttempts(context, it) }
+
+    private fun todayKey(): String = dayKey(0)
+
+    private fun dayKey(daysAgo: Int): String {
+        val calendar = java.util.Calendar.getInstance()
+        calendar.add(java.util.Calendar.DAY_OF_YEAR, -daysAgo)
+        return java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(calendar.time)
+    }
 }
