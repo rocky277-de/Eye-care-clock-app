@@ -26,6 +26,18 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
 
+        WindowCompat.enableEdgeToEdge(window)
+        val settingsRoot = findViewById<android.widget.ScrollView>(R.id.settingsRoot)
+        ViewCompat.setOnApplyWindowInsetsListener(settingsRoot) { view, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or
+                    WindowInsetsCompat.Type.displayCutout()
+            )
+            view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            insets
+        }
+        ViewCompat.requestApplyInsets(settingsRoot)
+
         workPicker = findViewById(R.id.settingsWorkPicker)
         restPicker = findViewById(R.id.settingsRestPicker)
         focusGoalPicker = findViewById(R.id.focusGoalPicker)
