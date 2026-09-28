@@ -21,10 +21,13 @@ class YoutubeShortsBlockerService : AccessibilityService() {
     private var windowManager: WindowManager? = null
     private var blockerView: View? = null
     private var lastBlockAt = 0L
+    private var lastBlockedPackage: String? = null
 
     override fun onServiceConnected() {
         super.onServiceConnected()
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+        lastBlockAt = 0L
+        lastBlockedPackage = null
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -35,6 +38,13 @@ class YoutubeShortsBlockerService : AccessibilityService() {
         if (BlockedAppsManager.isBlocked(this, packageName)) {
             showBlocker(packageName)
             return
+        }
+
+        // If Focus Mode ended or the selected app is no longer blocked,
+        // remove any stale blocker overlay immediately.
+        if (blockerView != null && lastBlockedPackage == packageName &&
+            !BlockedAppsManager.isBlocked(this, packageName)) {
+            removeBlocker()
         }
 
         if (packageName != YOUTUBE_PACKAGE || !isBlockerEnabled()) return
@@ -109,6 +119,7 @@ class YoutubeShortsBlockerService : AccessibilityService() {
         val now = System.currentTimeMillis()
         if (blockerView != null || now - lastBlockAt < 1200L) return
         lastBlockAt = now
+        lastBlockedPackage = packageName
 
         val view = LayoutInflater.from(this)
             .inflate(R.layout.layout_shorts_blocker, null)
@@ -155,6 +166,7 @@ class YoutubeShortsBlockerService : AccessibilityService() {
             }
         } catch (_: Exception) {
             blockerView = null
+        lastBlockedPackage = null
         }
     }
 
@@ -168,7 +180,11 @@ class YoutubeShortsBlockerService : AccessibilityService() {
         blockerView = null
     }
 
-    override fun onInterrupt() = Unit
+    override fun onInterrupt() {
+        // Accessibility can be interrupted by Android; clear transient UI
+        // state so a later event can recreate the blocker cleanly.
+        removeBlocker()
+    }
 
     override fun onDestroy() {
         removeBlocker()
