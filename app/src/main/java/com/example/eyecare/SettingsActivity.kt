@@ -2,6 +2,8 @@ package com.example.eyecare
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.PowerManager
+import android.os.Build
 import android.provider.Settings
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
@@ -90,6 +92,15 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         updateBlockedAppsSummary()
+        updateBatteryOptimizationStatus()
+
+        findViewById<Button>(R.id.batteryOptimizationButton).setOnClickListener {
+            try {
+                startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+            } catch (_: Exception) {
+                startActivity(Intent(Settings.ACTION_SETTINGS))
+            }
+        }
 
         findViewById<Switch>(R.id.keepOverlayPositionSwitch).apply {
             isChecked = getSharedPreferences(TimerManager.PREFS_NAME, MODE_PRIVATE)
@@ -100,6 +111,16 @@ class SettingsActivity : AppCompatActivity() {
                     .apply()
             }
         }
+    }
+
+    private fun updateBatteryOptimizationStatus() {
+        val manager = getSystemService(POWER_SERVICE) as PowerManager
+        val exempt = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            manager.isIgnoringBatteryOptimizations(packageName)
+        } else true
+        findViewById<android.widget.TextView>(R.id.batteryOptimizationStatus).text =
+            if (exempt) "Background timer protection: allowed" else
+                "Background timer protection: battery optimization is active"
     }
 
     private fun updateBlockedAppsSummary() {
@@ -144,7 +165,10 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (::workPicker.isInitialized) updateBlockedAppsSummary()
+        if (::workPicker.isInitialized) {
+            updateBlockedAppsSummary()
+            updateBatteryOptimizationStatus()
+        }
     }
 }
 
