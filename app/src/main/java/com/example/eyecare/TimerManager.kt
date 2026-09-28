@@ -255,6 +255,21 @@ object TimerManager {
         return "focus_total_ms_$date"
     }
 
+    fun getFocusMsForDay(context: Context, daysAgo: Int): Long {
+        val calendar = java.util.Calendar.getInstance()
+        calendar.add(java.util.Calendar.DAY_OF_YEAR, -daysAgo)
+        val key = focusTotalKey(calendar.timeInMillis)
+        return safeLong(prefs(context).getLong(key, 0L))
+    }
+
+    fun getCurrentFocusElapsedMs(context: Context): Long {
+        if (!isFocusActive(context)) return 0L
+        val start = safeLong(prefs(context).getLong(PREF_FOCUS_START_AT, 0L))
+        if (start <= 0L) return 0L
+        return (System.currentTimeMillis() - start).coerceAtLeast(0L)
+            .coerceAtMost(getWorkMinutes(context) * 60_000L)
+    }
+
     fun getTodayFocusMs(context: Context): Long {
         val p = prefs(context)
         var total = safeLong(p.getLong(focusTotalKey(), 0L))
