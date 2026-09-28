@@ -265,7 +265,12 @@ class MainActivity : AppCompatActivity() {
             "Skip rate: " + FocusManager.getBreakSkipRate(this, 7) + "%\n" +
             "Days with completed breaks: " + FocusManager.getBreakCompletionDays(this, 7) + "/7\n" +
             "Missed before start: " + (0..6).sumOf { FocusManager.getBreakMissed(this, it) } + "\n" +
-            "Recommendation: " + if (FocusManager.shouldRecommendBreak(this)) "Take your next break when the timer ends." else "No break needed right now."
+            "Recommendation: " + if (FocusManager.shouldRecommendBreak(this)) "Take your next break when the timer ends." else "No break needed right now." + "\n\n" +
+            "ACHIEVEMENTS\n" +
+            "Unlocked: " + FocusManager.getAchievementCount(this) + "\n" +
+            "Current streak: " + FocusManager.getCurrentFocusStreak(this) + " day(s)\n" +
+            "Best 30-day streak: " + FocusManager.getLongestFocusStreak30Days(this) + " day(s)\n" +
+            "Next: " + FocusManager.getNextAchievement(this)
 
         updateFocusHistory(goal)
     }
