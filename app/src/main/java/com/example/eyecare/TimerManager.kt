@@ -98,6 +98,8 @@ object TimerManager {
     }
 
     fun markBreakReady(context: Context) {
+        // Focus time belongs to the work interval, not the eye/rest break.
+        pauseFocus(context)
         prefs(context).edit().putString(PREF_PHASE, PHASE_BREAK)
             .remove(PREF_NEXT_TRIGGER_AT).remove(PREF_REMAINING_MS).apply()
     }
@@ -128,7 +130,11 @@ object TimerManager {
 
     fun setFocusModeEnabled(context: Context, enabled: Boolean) {
         prefs(context).edit().putBoolean(PREF_FOCUS_MODE_ENABLED, enabled).apply()
-        if (!enabled) pauseFocus(context)
+        if (!enabled) {
+            pauseFocus(context)
+        } else if (isRunning(context) && isWorkPhase(context)) {
+            startFocus(context)
+        }
     }
 
     fun isFocusActive(context: Context): Boolean =
