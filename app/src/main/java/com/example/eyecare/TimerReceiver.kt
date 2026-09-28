@@ -15,6 +15,7 @@ class TimerReceiver : BroadcastReceiver() {
             FocusManager.recordCompletedSession(context, TimerManager.getWorkMinutes(context))
         }
 
+        // End the work-focus session before showing the eye-break overlay.
         TimerManager.markBreakReady(context)
 
         val canDrawOverlays = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
