@@ -15,12 +15,14 @@ object BlockedAppsManager {
     fun setBlockedPackages(context: Context, packages: Set<String>) {
         context.getSharedPreferences(TimerManager.PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
-            .putStringSet(PREF_KEY, packages)
+            .putStringSet(PREF_KEY, packages.filter { it != context.packageName }.toSet())
             .apply()
     }
 
     fun isBlocked(context: Context, packageName: String): Boolean =
-        TimerManager.isFocusActive(context) && getBlockedPackages(context).contains(packageName)
+        packageName != context.packageName &&
+            TimerManager.isFocusActive(context) &&
+            getBlockedPackages(context).contains(packageName)
 
     fun recordBlockedAttempt(context: Context, packageName: String? = null) {
         val key = PREF_ATTEMPTS_PREFIX + todayKey()
