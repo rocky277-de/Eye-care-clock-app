@@ -274,8 +274,21 @@ object TimerManager {
         val p = prefs(context)
         var total = safeLong(p.getLong(focusTotalKey(), 0L))
         if (isFocusActive(context)) {
-            val start = p.getLong(PREF_FOCUS_START_AT, 0L)
-            if (start > 0L) total += (System.currentTimeMillis() - start).coerceAtLeast(0L).coerceAtMost(getWorkMinutes(context) * 60_000L)
+            val start = safeLong(p.getLong(PREF_FOCUS_START_AT, 0L))
+            val now = System.currentTimeMillis()
+            if (start > 0L && now > start) {
+                // Count only the portion of an active interval that belongs to today.
+                // This keeps the dashboard correct if the phone remains focused across midnight.
+                val todayStart = java.util.Calendar.getInstance().apply {
+                    set(java.util.Calendar.HOUR_OF_DAY, 0)
+                    set(java.util.Calendar.MINUTE, 0)
+                    set(java.util.Calendar.SECOND, 0)
+                    set(java.util.Calendar.MILLISECOND, 0)
+                }.timeInMillis
+                val segmentStart = maxOf(start, todayStart)
+                val elapsedToday = (now - segmentStart).coerceAtLeast(0L)
+                total += elapsedToday.coerceAtMost(getWorkMinutes(context) * 60_000L)
+            }
         }
         return total
     }
