@@ -133,6 +133,38 @@
             android:layout_marginBottom="6dp"/>
 
         <TextView
+            android:id="@+id/exactAlarmStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Checking exact alarm access..."
+            android:textColor="#B8C1D1"
+            android:textSize="13sp"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/exactAlarmButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Allow Exact Alarms"
+            android:layout_marginBottom="10dp"/>
+
+        <TextView
+            android:id="@+id/notificationStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Checking notification access..."
+            android:textColor="#B8C1D1"
+            android:textSize="13sp"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/notificationSettingsButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Open Notification Settings"
+            android:layout_marginBottom="10dp"/>
+
+        <TextView
             android:id="@+id/batteryOptimizationStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
