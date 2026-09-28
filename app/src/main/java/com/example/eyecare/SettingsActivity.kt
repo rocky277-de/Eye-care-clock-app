@@ -84,7 +84,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         findViewById<Button>(R.id.enableShortsBlockerButton).setOnClickListener {
-            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            showAccessibilityDisclosure()
         }
 
         findViewById<Button>(R.id.selectBlockedAppsButton).setOnClickListener {
@@ -121,6 +121,18 @@ class SettingsActivity : AppCompatActivity() {
                     .apply()
             }
         }
+    }
+
+
+    private fun showAccessibilityDisclosure() {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(getString(R.string.accessibility_disclosure_title))
+            .setMessage(getString(R.string.accessibility_disclosure_message))
+            .setNegativeButton(getString(R.string.accessibility_disclosure_cancel), null)
+            .setPositiveButton(getString(R.string.accessibility_disclosure_accept)) { _, _ ->
+                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            }
+            .show()
     }
 
     private fun updateExactAlarmStatus() {
