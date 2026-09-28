@@ -11,6 +11,10 @@ class TimerReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (!TimerManager.isRunning(context)) return
 
+        // Only the active work-phase alarm may open a break. This prevents
+        // duplicate/stale broadcasts from recording duplicate sessions.
+        if (!TimerManager.isWorkPhase(context)) return
+
         if (FocusManager.isEnabled(context)) {
             FocusManager.recordCompletedSession(context, TimerManager.getWorkMinutes(context))
         }
