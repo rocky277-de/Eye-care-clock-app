@@ -102,6 +102,22 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Enable Shorts Blocker"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:id="@+id/blockedAppsSummary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="No apps selected"
+            android:textColor="#B8C1D1"
+            android:textSize="14sp"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/selectBlockedAppsButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Select Apps to Block during Focus"
             android:layout_marginBottom="16dp"/>
 
         <Switch
