@@ -191,6 +191,63 @@ object FocusManager {
         return prefs(context).getInt(prefix + key, 0)
     }
 
+    // Phase 10C — achievement helpers
+    fun getCurrentFocusStreak(context: Context): Int {
+        var streak = 0
+        for (day in 0..29) {
+            if (getMinutesForDay(context, day) > 0) streak++ else break
+        }
+        return streak
+    }
+
+    fun getLongestFocusStreak30Days(context: Context): Int {
+        var current = 0
+        var best = 0
+        for (day in 0..29) {
+            if (getMinutesForDay(context, day) > 0) {
+                current++
+                best = maxOf(best, current)
+            } else current = 0
+        }
+        return best
+    }
+
+    fun getAchievementCount(context: Context): Int {
+        val streak = getCurrentFocusStreak(context)
+        val minutes = getThirtyDayMinutes(context)
+        val sessions = getThirtyDaySessions(context)
+        val goalDays = getGoalCompletionDays(context, 30)
+        var count = 0
+        if (streak >= 3) count++
+        if (streak >= 7) count++
+        if (streak >= 14) count++
+        if (minutes >= 300) count++
+        if (minutes >= 600) count++
+        if (sessions >= 10) count++
+        if (sessions >= 25) count++
+        if (goalDays >= 3) count++
+        if (goalDays >= 7) count++
+        return count
+    }
+
+    fun getNextAchievement(context: Context): String {
+        val streak = getCurrentFocusStreak(context)
+        val minutes = getThirtyDayMinutes(context)
+        val sessions = getThirtyDaySessions(context)
+        val goalDays = getGoalCompletionDays(context, 30)
+        return when {
+            streak < 3 -> "3-day focus streak"
+            streak < 7 -> "7-day focus streak"
+            streak < 14 -> "14-day focus streak"
+            minutes < 300 -> "300 focus minutes (30d)"
+            minutes < 600 -> "600 focus minutes (30d)"
+            sessions < 10 -> "10 focus sessions (30d)"
+            sessions < 25 -> "25 focus sessions (30d)"
+            goalDays < 3 -> "3 goal-completion days (30d)"
+            goalDays < 7 -> "7 goal-completion days (30d)"
+            else -> "All current achievements unlocked"
+        }
+    }
     fun shouldUseLongBreak(context: Context): Boolean =
         isEnabled(context) && getTodaySessions(context) > 0 &&
             getTodaySessions(context) % SESSIONS_BEFORE_LONG_BREAK == 0
