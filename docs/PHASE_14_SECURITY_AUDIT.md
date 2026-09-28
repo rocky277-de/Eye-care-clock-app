@@ -57,6 +57,16 @@ The project currently targets API 34. As of August 31, 2026, Google Play require
 
 The API 36 migration must be compiled and tested rather than changing only `targetSdk` blindly. Android 15/16 behavior changes, foreground-service behavior, overlay behavior, accessibility behavior, and UI edge-to-edge behavior should be regression-tested.
 
+## Phase 14B migration notes
+
+- compileSdk/targetSdk are now API 36.
+- Android Gradle Plugin is now 8.10.1, which supports API 36.
+- CI uses Gradle 8.11.1 and installs the Android 16 SDK before compiling.
+- App version is now 1.5 (versionCode 6).
+- MainActivity and SettingsActivity explicitly handle system-bar/display-cutout insets because edge-to-edge is enforced for apps targeting Android 15+ and Android 16 removes the target-SDK opt-out.
+- No predictive-back migration was needed because the app does not override legacy back callbacks.
+- No Android 16 health/sensor permission migration is needed because the app does not declare or use those APIs.
+
 ## Validation checklist
 
 - [ ] Debug build succeeds after Phase 14A changes.
@@ -67,6 +77,10 @@ The API 36 migration must be compiled and tested rather than changing only `targ
 - [ ] Selected Focus apps still block only during an active Focus session.
 - [ ] Timer overlay still works.
 - [ ] Production release APK/AAB build succeeds with signing secrets.
+- [x] API 36 build configuration migrated.
+- [ ] API 36 debug build passes in CI.
+- [ ] API 36 APK tested on an Android 16 device/emulator.
+- [ ] API 36 release APK/AAB tested with production signing.
 - [ ] API 36 migration is completed and tested before Play submission.
 
 References:
