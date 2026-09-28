@@ -122,6 +122,32 @@
             android:text="Select Apps to Block during Focus"
             android:layout_marginBottom="14dp"/>
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="BACKGROUND RELIABILITY"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="6dp"/>
+
+        <TextView
+            android:id="@+id/batteryOptimizationStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Checking battery optimization..."
+            android:textColor="#B8C1D1"
+            android:textSize="13sp"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/batteryOptimizationButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Open Battery Optimization Settings"
+            android:layout_marginBottom="14dp"/>
+
         <Switch
             android:id="@+id/keepOverlayPositionSwitch"
             android:layout_width="match_parent"
