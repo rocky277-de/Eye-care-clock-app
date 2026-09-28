@@ -54,7 +54,7 @@ object FocusManager {
     }
 
     fun getTodayMinutes(context: Context): Int =
-        prefs(context).getInt(PREF_FOCUS_MINUTES_PREFIX + todayKey(), 0)
+        (TimerManager.getTodayFocusMs(context) / 60_000L).toInt().coerceAtLeast(0)
 
     fun getTodaySessions(context: Context): Int =
         prefs(context).getInt(PREF_SESSIONS_TODAY + "_" + todayKey(), 0)
@@ -62,19 +62,23 @@ object FocusManager {
     fun recordCompletedSession(context: Context, minutes: Int) {
         if (!isEnabled(context)) return
         val p = prefs(context)
-        val key = PREF_FOCUS_MINUTES_PREFIX + todayKey()
         val sessionKey = PREF_SESSIONS_TODAY + "_" + todayKey()
+        // Focus minutes are now derived from TimerManager's canonical millisecond
+        // ledger. Only session count is recorded here, preventing double-counting.
         p.edit()
-            .putInt(key, p.getInt(key, 0) + minutes.coerceAtLeast(0))
-            .putInt(sessionKey, p.getInt(sessionKey, 0) + 1)
+            .putInt(sessionKey, p.getInt(sessionKey, 0).coerceAtLeast(0) + 1)
             .apply()
     }
 
     fun getMinutesForDay(context: Context, daysAgo: Int): Int {
         val calendar = java.util.Calendar.getInstance()
         calendar.add(java.util.Calendar.DAY_OF_YEAR, -daysAgo)
+        val canonical = (TimerManager.getFocusMsForDay(context, daysAgo) / 60_000L)
+            .toInt().coerceAtLeast(0)
+        if (canonical > 0) return canonical
         val key = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(calendar.time)
-        return (prefs(context).getLong(PREF_FOCUS_MINUTES_PREFIX + key, 0L) / 60_000L).toInt()
+        return prefs(context).getLong(PREF_FOCUS_MINUTES_PREFIX + key, 0L)
+            .coerceAtLeast(0L).div(60_000L).toInt()
     }
 
     fun getSevenDayMinutes(context: Context): Int =
