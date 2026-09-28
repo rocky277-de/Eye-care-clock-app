@@ -15,6 +15,9 @@ class TimerReceiver : BroadcastReceiver() {
         // duplicate/stale broadcasts from recording duplicate sessions.
         if (!TimerManager.isWorkPhase(context)) return
 
+        // Ignore stale/racing alarms from an earlier timer deadline.
+        if (!TimerManager.isTriggerDue(context)) return
+
         if (FocusManager.isEnabled(context)) {
             FocusManager.recordCompletedSession(context, TimerManager.getWorkMinutes(context))
         }
