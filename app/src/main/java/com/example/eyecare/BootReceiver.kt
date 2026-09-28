@@ -9,6 +9,8 @@ class BootReceiver : BroadcastReceiver() {
         if (intent?.action != Intent.ACTION_BOOT_COMPLETED) return
         if (!TimerManager.isRunning(context)) return
         if (TimerManager.isWorkPhase(context)) {
+            // Reboot downtime is never counted as focus time.
+            TimerManager.recoverFocusAfterBoot(context)
             val remaining = TimerManager.getRemainingMs(context)
             TimerManager.startTimer(context, if (remaining > 0L) remaining else 1000L)
         }
