@@ -99,6 +99,14 @@
             android:textColor="#FFFFFF"
             android:layout_marginBottom="8dp"/>
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Accessibility access is used only for Shorts and Focus blocking. Eye Care processes the on-screen information on this device."
+            android:textColor="#B8C1D1"
+            android:textSize="12sp"
+            android:layout_marginBottom="8dp"/>
+
         <Button
             android:id="@+id/enableShortsBlockerButton"
             android:layout_width="match_parent"
