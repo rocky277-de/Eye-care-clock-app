@@ -73,6 +73,26 @@
             android:background="#1F2937"
             android:layout_marginBottom="10dp" />
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="7-DAY VISUAL HISTORY"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:paddingStart="16dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="4dp" />
+
+        <LinearLayout
+            android:id="@+id/focusHistoryContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp"
+            android:background="#1F2937"
+            android:layout_marginBottom="16dp" />
+
         <Switch
             android:id="@+id/focusModeSwitch"
             android:layout_width="match_parent"
