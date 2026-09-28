@@ -12,6 +12,8 @@ import android.os.CountDownTimer
 import android.provider.Settings
 import android.content.pm.PackageManager
 import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.NumberPicker
 import android.widget.TextView
 import android.widget.Switch
@@ -31,6 +33,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var stopButton: Button
     private lateinit var focusModeSwitch: Switch
     private lateinit var focusStatsText: TextView
+    private lateinit var focusHistoryContainer: LinearLayout
     private lateinit var workPicker: NumberPicker
     private lateinit var restPicker: NumberPicker
     private lateinit var prefs: SharedPreferences
@@ -75,6 +78,7 @@ class MainActivity : AppCompatActivity() {
         stopButton = findViewById(R.id.stopButton)
         focusModeSwitch = findViewById(R.id.focusModeSwitch)
         focusStatsText = findViewById(R.id.focusStatsText)
+        focusHistoryContainer = findViewById(R.id.focusHistoryContainer)
         findViewById<Button>(R.id.settingsButton).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
@@ -210,16 +214,42 @@ class MainActivity : AppCompatActivity() {
         val weekSessions = FocusManager.getSevenDaySessions(this)
         val todaySessions = FocusManager.getTodaySessions(this)
 
-        val history = (0..6).joinToString("  •  ") { day ->
-            val label = when (day) {
-                0 -> "Today"
-                1 -> "Yday"
-                else -> "${day}d"
-            }
-            "$label: ${FocusManager.getMinutesForDay(this, day)}m"
-        }
+        focusStatsText.text = "FOCUS TODAY\n\${minutes} min / \${goal} min goal\nProgress: \${percent}%\nSessions: $todaySessions\n\n7-DAY FOCUS\n\${weekMinutes} min • $weekSessions sessions\n\nBLOCKED DISTRACTIONS\nToday: $blockedToday • 7-day: $blockedWeek"
+        updateFocusHistory(goal)
+    }
 
-        focusStatsText.text = "FOCUS TODAY\n${minutes} min / ${goal} min goal\nProgress: ${percent}%\nSessions: $todaySessions\n\n7-DAY FOCUS\n${weekMinutes} min • $weekSessions sessions\n$history\n\nBLOCKED DISTRACTIONS\nToday: $blockedToday • 7-day: $blockedWeek"
+    private fun updateFocusHistory(goal: Int) {
+        if (!::focusHistoryContainer.isInitialized) return
+        focusHistoryContainer.removeAllViews()
+        val labels = arrayOf("Today", "Yesterday", "2d ago", "3d ago", "4d ago", "5d ago", "6d ago")
+        val values = (0..6).map { FocusManager.getMinutesForDay(this, it) }
+        val maxValue = maxOf(goal, values.maxOrNull() ?: 0, 1)
+        values.forEachIndexed { index, value ->
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(0, 4, 0, 4)
+            }
+            val label = TextView(this).apply {
+                text = labels[index]
+                setTextColor(android.graphics.Color.LTGRAY)
+                textSize = 12f
+            }
+            row.addView(label, LinearLayout.LayoutParams(82, LinearLayout.LayoutParams.WRAP_CONTENT))
+            val bar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+                max = maxValue
+                progress = value.coerceAtMost(maxValue)
+            }
+            row.addView(bar, LinearLayout.LayoutParams(0, 18, 1f).apply { setMargins(8, 0, 8, 0) })
+            val valueText = TextView(this).apply {
+                text = "\${value}m"
+                setTextColor(android.graphics.Color.WHITE)
+                textSize = 12f
+                gravity = android.view.Gravity.END
+            }
+            row.addView(valueText, LinearLayout.LayoutParams(42, LinearLayout.LayoutParams.WRAP_CONTENT))
+            focusHistoryContainer.addView(row)
+        }
     }
 
     private fun restoreTimerState() {
