@@ -116,7 +116,11 @@ class SettingsActivity : AppCompatActivity() {
     private fun updateBatteryOptimizationStatus() {
         val manager = getSystemService(POWER_SERVICE) as PowerManager
         val exempt = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            manager.isIgnoringBatteryOptimizations(packageName)
+            try {
+                manager.isIgnoringBatteryOptimizations(packageName)
+            } catch (_: SecurityException) {
+                false
+            }
         } else true
         findViewById<android.widget.TextView>(R.id.batteryOptimizationStatus).text =
             if (exempt) "Background timer protection: allowed" else
