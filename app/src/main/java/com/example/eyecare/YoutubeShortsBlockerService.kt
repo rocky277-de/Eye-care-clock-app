@@ -28,15 +28,23 @@ class YoutubeShortsBlockerService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event == null || event.packageName?.toString() != YOUTUBE_PACKAGE) return
-        if (!isBlockerEnabled()) return
+        if (event == null) return
+        val packageName = event.packageName?.toString() ?: return
+
+        // Focus Mode app blocking applies only while a work session is active.
+        if (BlockedAppsManager.isBlocked(this, packageName)) {
+            showBlocker(packageName)
+            return
+        }
+
+        if (packageName != YOUTUBE_PACKAGE || !isBlockerEnabled()) return
 
         when (event.eventType) {
             AccessibilityEvent.TYPE_VIEW_CLICKED -> {
                 if (containsShortsLabel(event.source) ||
                     event.text.any { it.toString().equals("Shorts", ignoreCase = true) }
                 ) {
-                    showBlocker()
+                    showBlocker(YOUTUBE_PACKAGE)
                 }
             }
 
@@ -97,7 +105,7 @@ class YoutubeShortsBlockerService : AccessibilityService() {
         }
     }
 
-    private fun showBlocker() {
+    private fun showBlocker(packageName: String) {
         val now = System.currentTimeMillis()
         if (blockerView != null || now - lastBlockAt < 1200L) return
         lastBlockAt = now
@@ -105,8 +113,20 @@ class YoutubeShortsBlockerService : AccessibilityService() {
         val view = LayoutInflater.from(this)
             .inflate(R.layout.layout_shorts_blocker, null)
 
+        val appName = try {
+            packageManager.getApplicationLabel(
+                packageManager.getApplicationInfo(packageName, 0)
+            ).toString()
+        } catch (_: Exception) {
+            "This app"
+        }
+
         view.findViewById<TextView>(R.id.shortsBlockerMessage).text =
-            "YouTube Shorts is blocked\n\nUse YouTube for long-form videos only."
+            if (packageName == YOUTUBE_PACKAGE) {
+                "YouTube Shorts is blocked\n\nUse YouTube for long-form videos only."
+            } else {
+                "$appName is blocked during Focus Mode."
+            }
 
         view.findViewById<Button>(R.id.leaveShortsButton).setOnClickListener {
             performGlobalAction(GLOBAL_ACTION_BACK)
