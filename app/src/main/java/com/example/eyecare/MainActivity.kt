@@ -78,6 +78,18 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        WindowCompat.enableEdgeToEdge(window)
+        val mainRoot = findViewById<android.widget.ScrollView>(R.id.mainRoot)
+        ViewCompat.setOnApplyWindowInsetsListener(mainRoot) { view, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or
+                    WindowInsetsCompat.Type.displayCutout()
+            )
+            view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            insets
+        }
+        ViewCompat.requestApplyInsets(mainRoot)
+
         countdownText = findViewById(R.id.countdownText)
         statusText = findViewById(R.id.statusText)
         sessionText = findViewById(R.id.sessionText)
