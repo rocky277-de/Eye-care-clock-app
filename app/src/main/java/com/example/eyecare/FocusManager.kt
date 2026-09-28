@@ -158,6 +158,9 @@ object FocusManager {
     fun getBreakSkipped(context: Context, daysAgo: Int = 0): Int =
         getDailyBreakStat(context, "stats_skipped_", daysAgo)
 
+    fun getBreakMissed(context: Context, daysAgo: Int = 0): Int =
+        getDailyBreakStat(context, "stats_missed_", daysAgo)
+
     fun getBreakTotal(context: Context, days: Int = 7): Int =
         (0 until days.coerceAtLeast(1)).sumOf { getBreakCompleted(context, it) + getBreakSkipped(context, it) }
 
