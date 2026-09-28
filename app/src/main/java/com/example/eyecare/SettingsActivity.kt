@@ -100,6 +100,8 @@ class SettingsActivity : AppCompatActivity() {
                     .apply()
             }
         }
+    }
+
     private fun updateBlockedAppsSummary() {
         val count = BlockedAppsManager.getBlockedPackages(this).size
         findViewById<android.widget.TextView>(R.id.blockedAppsSummary).text =
