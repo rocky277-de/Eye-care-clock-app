@@ -91,6 +91,23 @@ object FocusManager {
     }
 
 
+    fun getLongestFocusStreak(context: Context): Int {
+        var streak = 0
+        var best = 0
+        for (day in 0..6) {
+            if (getMinutesForDay(context, day) > 0) {
+                streak++
+                best = maxOf(best, streak)
+            } else {
+                streak = 0
+            }
+        }
+        return best
+    }
+
+    fun getAverageDailyMinutes(context: Context): Int =
+        getSevenDayMinutes(context) / 7
+
     fun shouldUseLongBreak(context: Context): Boolean =
         isEnabled(context) && getTodaySessions(context) > 0 &&
             getTodaySessions(context) % SESSIONS_BEFORE_LONG_BREAK == 0
