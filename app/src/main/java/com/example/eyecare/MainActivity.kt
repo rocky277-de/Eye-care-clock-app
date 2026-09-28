@@ -257,7 +257,14 @@ class MainActivity : AppCompatActivity() {
             "DISTRACTION INSIGHTS\n" +
             "Top blocked app: " + distractingLabel + "\n" +
             "Rate: " + String.format(Locale.US, "%.1f", distractionRate) + " attempts/hour\n" +
-            "Today: " + blockedToday + " • 7-day: " + blockedWeek
+            "Today: " + blockedToday + " • 7-day: " + blockedWeek + "\n\n" +
+            "SMART BREAKS\n" +
+            "Completed today: " + FocusManager.getBreakCompleted(this, 0) + "\n" +
+            "7-day total: " + FocusManager.getBreakTotal(this, 7) + "\n" +
+            "Completion rate: " + FocusManager.getBreakCompletionRate(this, 7) + "%\n" +
+            "Skip rate: " + FocusManager.getBreakSkipRate(this, 7) + "%\n" +
+            "Days with completed breaks: " + FocusManager.getBreakCompletionDays(this, 7) + "/7\n" +
+            "Recommendation: " + if (FocusManager.shouldRecommendBreak(this)) "Take your next break when the timer ends." else "No break needed right now."
 
         updateFocusHistory(goal)
     }
