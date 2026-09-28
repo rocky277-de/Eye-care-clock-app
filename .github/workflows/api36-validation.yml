@@ -21,7 +21,7 @@ jobs:
           java-version: '17'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4.0.4
 
       - name: Install Android 16 SDK
         run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
