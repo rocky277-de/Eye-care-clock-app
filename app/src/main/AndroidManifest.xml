@@ -64,19 +64,6 @@
                 android:value="eye-care-break-overlay" />
         </service>
 
-        <!-- YouTube Shorts blocker. User must explicitly enable it in Android Accessibility settings. -->
-        <service
-            android:name=".YoutubeShortsBlockerService"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
-            android:exported="false"
-            android:label="YouTube Shorts Blocker">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/shorts_accessibility_service" />
-        </service>
     </application>
 </manifest>
 
