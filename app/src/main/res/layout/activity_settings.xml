@@ -101,6 +101,7 @@
             android:layout_marginBottom="8dp"/>
 
         <TextView
+            android:id="@+id/accessibilityDisclosureText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Accessibility access is used only for Shorts and Focus blocking. Eye Care processes the on-screen information on this device."
