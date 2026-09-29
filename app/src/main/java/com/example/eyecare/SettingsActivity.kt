@@ -88,6 +88,18 @@ class SettingsActivity : AppCompatActivity() {
             Toast.makeText(this, "Timer and statistics reset", Toast.LENGTH_SHORT).show()
         }
 
+        val shortsBlockerAvailable = resources.getBoolean(R.bool.shorts_blocker_available)
+        findViewById<Switch>(R.id.blockYoutubeShortsSwitch).visibility =
+            if (shortsBlockerAvailable) android.view.View.VISIBLE else android.view.View.GONE
+        findViewById<Button>(R.id.enableShortsBlockerButton).visibility =
+            if (shortsBlockerAvailable) android.view.View.VISIBLE else android.view.View.GONE
+        findViewById<android.widget.TextView>(R.id.accessibilityDisclosureText).visibility =
+            if (shortsBlockerAvailable) android.view.View.VISIBLE else android.view.View.GONE
+        findViewById<android.widget.TextView>(R.id.blockedAppsSummary).visibility =
+            if (shortsBlockerAvailable) android.view.View.VISIBLE else android.view.View.GONE
+        findViewById<Button>(R.id.selectBlockedAppsButton).visibility =
+            if (shortsBlockerAvailable) android.view.View.VISIBLE else android.view.View.GONE
+
         findViewById<Switch>(R.id.blockYoutubeShortsSwitch).apply {
             isChecked = getSharedPreferences(TimerManager.PREFS_NAME, MODE_PRIVATE)
                 .getBoolean("block_youtube_shorts", false)
