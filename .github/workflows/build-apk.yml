@@ -28,7 +28,7 @@ jobs:
         with:
           gradle-version: 8.11.1
       - name: Compile debug build
-        run: gradle clean assembleDebug
+        run: gradle clean assembleStandardDebug
 
       - name: Verify debug APK
         run: |
@@ -38,8 +38,8 @@ jobs:
       - name: Upload validation debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: EyeCareApp-v1.5-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: EyeCareApp-v1.6-standard-debug-apk
+          path: app/build/outputs/apk/standard/debug/app-standard-debug.apk
           if-no-files-found: error
 
   release:
@@ -95,13 +95,13 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          gradle clean assembleRelease bundleRelease
+          gradle clean assembleStandardRelease bundleStandardRelease
 
       - name: Verify release outputs
         if: env.HAS_SIGNING_KEY == 'true'
         run: |
-          test -s app/build/outputs/apk/release/app-release.apk
-          test -s app/build/outputs/bundle/release/app-release.aab
+          test -s app/build/outputs/apk/standard/release/app-standard-release.apk
+          test -s app/build/outputs/bundle/standardRelease/app-standard-release.aab
           ls -lh app/build/outputs/apk/release/app-release.apk
           ls -lh app/build/outputs/bundle/release/app-release.aab
 
@@ -109,14 +109,14 @@ jobs:
         if: env.HAS_SIGNING_KEY == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: EyeCareApp-v1.5-release-apk
+          name: EyeCareApp-v1.6-standard-release-apk
           path: app/build/outputs/apk/release/app-release.apk
 
       - name: Upload signed release AAB
         if: env.HAS_SIGNING_KEY == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: EyeCareApp-v1.5-release-aab
+          name: EyeCareApp-v1.6-standard-release-aab
           path: app/build/outputs/bundle/release/app-release.aab
 
       - name: Build debug APK fallback
@@ -128,6 +128,6 @@ jobs:
         if: env.HAS_SIGNING_KEY != 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: EyeCareApp-v1.5-debug-apk-fallback
+          name: EyeCareApp-v1.6-standard-debug-apk-fallback
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
